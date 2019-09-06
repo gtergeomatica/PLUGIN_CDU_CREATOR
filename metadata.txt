@@ -1,0 +1,41 @@
+# This file contains metadata for your plugin. Since 
+# version 2.0 of QGIS this is the proper way to supply 
+# information about a plugin. The old method of 
+# embedding metadata in __init__.py will 
+# is no longer supported since version 2.0.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=CDU Creator
+qgisMinimumVersion=3.0
+description=This plugin creates the .pdf file of CDU (Certificato di Destinazione Urbanistica).
+version=0.1
+author=Roberta Fagandini (Gter srl) - Roberto Marzocchi (Gter srl)
+email=assistenzagis@gter.it
+
+about=This plugin creates the CDU (Certificato di Destinazione Urbanistica) using the vector layer of cadastre (parcels) and the vector layers of the urban plan. The selected parcel is intersected with the overlapping layers of the urban plan and the information from the related attribute tables are then printed in the final output. The output is a .pdf file containing all the information, related to the selected parcel, extracted through the intersection process. The .pdf file can be customized adding a logo, a title and a text paragraph (e.g. introduction, legislative references, etc.). All the other information printed in the final CDU file are instead retrieved by the plugin.
+
+tracker=https://github.com/gtergeomatica/cdu_creator/issues
+repository=https://github.com/gtergeomatica/cdu_creator
+# End of mandatory metadata
+
+# Recommended items:
+
+# Uncomment the following line and add your changelog:
+changelog=
+    0.1
+        * First public release 
+
+# Tags are comma separated with spaces allowed
+tags=CDU catasto cdu_creator PDF
+
+homepage=https://github.com/gtergeomatica/cdu_creator
+category=Plugins
+icon=icon.png
+# experimental flag
+experimental=True
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
