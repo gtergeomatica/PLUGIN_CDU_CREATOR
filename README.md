@@ -3,7 +3,8 @@ Plugin QGIS CDU Creator per la compilazione automatica del Certificato di Destin
 
 Al Momemnto il Plugin CDU Creator non è ancora disponibile sulla repository ufficiale dei plugin di QGIS ma verrà pubblicato a breve. E' comunque possibile installarlo su QGIS utilizzando il file .zip scaricato da questa repository e seguendo le istruzioni riportate di seguito.
 
-**Scaricare il file .zip del Plugin CDU Creator**
+**1 - Scaricare il file .zip del Plugin CDU Creator**
 * Da questa pagina web, clickare su *Clone or Download* e successivamente su *Download ZIP* e salvare il file zip in una cartella sul proprio PC
+![i_sentinel_mask_ES](https://github.com/gtergeomatica/tutorial-lidar-qgis/blob/master/img/download.png)
 
 Per segnalarci eventuali errorri, bachi e simili si prega di aprire una issue su questo repository.
