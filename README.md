@@ -15,4 +15,6 @@ Al Momemnto il Plugin CDU Creator non è ancora disponibile sulla repository uff
 
 Da qui è necessario selezionare tramite il pulsante di navigazione il file ZIP scaricato precedentemente e infine clickare su Installa Plugin. Una volta terminata l'installazione il plugin **CDU Creator** sarà visibile nell'elenco dei plugin installati e l'icona del plugin sarà stata aggiunta automaticamente alla barra degli strumenti.
 
-Per segnalarci eventuali errorri, bachi e simili si prega di aprire una issue su questo repository.
+Il manuale d'uso del Plugin CDU Creator è disponibile a questo link https://manuale-cdu-creator.readthedocs.io/it/latest/
+
+Per segnalarci eventuali errorri, bachi e simili si prega di aprire una issue su questa repository.
