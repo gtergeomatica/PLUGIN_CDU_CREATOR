@@ -283,7 +283,7 @@ class CduCreator:
             # #print(uniquevalues)
             uniqueprovider = self.lyr.dataProvider()
             fields = uniqueprovider.fields()
-            id = fields.indexFromName('FOGLIO')
+            id = fields.lookupField('FOGLIO')
             uniquevalues = list(uniqueprovider.uniqueValues( id ))
             # #print(len(uniquevalues))
             # #print(uniquevalues)
@@ -308,7 +308,7 @@ class CduCreator:
             self.show_values = []
             filter = self.dlg.foglioComboBox.currentText()
             #print (filter)
-            values = [feat['MAPPALE'] for feat in self.lyr.getFeatures() if feat['FOGLIO'] == filter]
+            values = [feat['MAPPALE'.casefold()] for feat in self.lyr.getFeatures() if feat['FOGLIO'.casefold()] == filter]
             list_val = set(values)
             for uv in list_val:
                 if uv != '':
@@ -329,7 +329,7 @@ class CduCreator:
         uniqueprovider = self.lyr.dataProvider()
         fields = uniqueprovider.fields()
         unique_foglio = []
-        id_foglio = fields.indexFromName('FOGLIO') 
+        id_foglio = fields.lookupField('FOGLIO') 
         unique_foglio = list(uniqueprovider.uniqueValues( id_foglio ))
 
         self.foglio_values = []
@@ -538,9 +538,9 @@ class CduCreator:
             
             if self.lyr.selectedFeatureCount() > 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
                 selectedF = self.lyr.selectedFeatures()[0]
-                sel_foglio = selectedF["FOGLIO"]
+                sel_foglio = selectedF["FOGLIO".casefold()]
                 print(sel_foglio)
-                sel_particella = selectedF["MAPPALE"]
+                sel_particella = selectedF["MAPPALE".casefold()]
                 print(sel_particella)
                 if self.lyr.selectedFeatureCount() > 1:
                     self.dlg.textLog.append(self.tr('ATTENZIONE: sono state selezionate più particelle catastali, selezionare una sola particella\n'))
@@ -557,7 +557,7 @@ class CduCreator:
                     self.dlg.textLog.append(self.tr('ATTENZIONE: era già presente una selezione nel layer terreni_catastali, verrà sovrascritta con la particella foglio: {} e mappale: {}.\n'.format(sel_foglio, sel_particella)))
                     QCoreApplication.processEvents()
 
-                self.lyr.selectByExpression("FOGLIO={} AND MAPPALE={}".format(sel_foglio, sel_particella))
+                self.lyr.selectByExpression("{}={} AND {}={}".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
                 selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
             elif self.lyr.selectedFeatureCount() == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
                 self.dlg.textLog.append(self.tr('ATTENZIONE: nessuna particella è stata selezionata, selezionare un mappale\n'))
@@ -810,7 +810,7 @@ class CduCreator:
                 self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer. Il CDU non verrà creato.\n'.format(sel_foglio, sel_particella)))
                 QCoreApplication.processEvents()
             
-            self.lyr.selectByExpression("FOGLIO={} AND MAPPALE={}".format(sel_foglio, sel_particella))
+            self.lyr.selectByExpression("{}={} AND {}={}".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
             
             #rimuove il gruppo temporaneo
             rm_group = self.root.findGroup('temp')
