@@ -589,6 +589,7 @@ class CduCreator:
             iface.layerTreeView().refreshLayerSymbology(lyr_aoi.id())
             
             #legge gruppi, sottogruppi e layers nel layer tree e aggiunge a un dizionario solo quelli che intersecano l'area di interesse
+            lyrs = []
             layers = []
             layers_name = []
             subgr_name = []
@@ -597,22 +598,25 @@ class CduCreator:
                 if isinstance(child, QgsLayerTreeGroup):
                     if child.name() == selectedGroup:
                         for gr in child.children():
-                            if isinstance(child, QgsLayerTreeGroup):
+                            if isinstance(gr, QgsLayerTreeGroup):
                             #print(gr.name())
                                 subgr_name.append(gr.name())
                                 lyrs = gr.findLayers()
-                                for l in lyrs:
-                                    #print(lyr.name())
-                                    #print(lyr.layerId())
-                                    processing.run("native:selectbylocation", {'INPUT': l.layer(),
-                                            'PREDICATE': [0],
-                                            'INTERSECT': selected_feat,
-                                            'METHOD': 0})
-                                    if l.layer().selectedFeatureCount() > 0:
-                                        layers.append(l.layer())
-                                        layers_name.append(l.name())
-                                        layers_dict[layers[-1]] = (subgr_name[-1], layers_name[-1])
-                                        l.layer().removeSelection()
+                            elif isinstance(gr, QgsLayerTreeLayer):
+                                subgr_name.append('')
+                                lyrs.append(gr)
+                            for l in lyrs:
+                                #print(lyr.name())
+                                #print(lyr.layerId())
+                                processing.run("native:selectbylocation", {'INPUT': l.layer(),
+                                        'PREDICATE': [0],
+                                        'INTERSECT': selected_feat,
+                                        'METHOD': 0})
+                                if l.layer().selectedFeatureCount() > 0:
+                                    layers.append(l.layer())
+                                    layers_name.append(l.name())
+                                    layers_dict[layers[-1]] = (subgr_name[-1], layers_name[-1])
+                                    l.layer().removeSelection()
 
             if len(layers) > 0:
                 shp_count = 0
@@ -695,7 +699,6 @@ class CduCreator:
                                 descr = '- Descrizione: -'
                         else:
                             descr = '- Descrizione: -'
-                        sbgr_lyr = '{} - {}'.format(layers_dict[key][0], layers_dict[key][1])
                         if nome_index != -1:
                             nome = '- Nome: {}'.format(fl[nome_list[0]])
                             if fl[nome_list[0]] == NULL:
@@ -715,6 +718,10 @@ class CduCreator:
                         else:
                             rif_nto = '- Articolo: -'
                         area_tot = '- Area totale (mq): {:.3f}'.format(area)
+                        if layers_dict[key][0]:
+                            sbgr_lyr = '{} - {}'.format(layers_dict[key][0], layers_dict[key][1])
+                        else:
+                            sbgr_lyr = '{}'.format(layers_dict[key][1])
                         print_dict[unique_id] = (sbgr_lyr, nome, descr, rif_leg, rif_nto, area_tot)
                 #print(print_dict)
                 
