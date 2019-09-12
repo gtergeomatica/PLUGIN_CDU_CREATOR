@@ -653,7 +653,7 @@ class CduCreator:
             elif self.foglioIndex != 0 and self.particellaIndex != 0:
                 #print('sel_sezione = {}'.format(sel_sezione))
                 sel_foglio = self.show_values_s[self.foglioIndex - 1]
-                #print('sel_foglio Ë {}'.format(sel_foglio))
+                #print('sel_foglio √® {}'.format(sel_foglio))
                 sel_particella = self.show_values[self.particellaIndex - 1]
                 #print(sel_particella)
                 if self.lyr.selectedFeatureCount() > 0:
@@ -661,7 +661,7 @@ class CduCreator:
                     QCoreApplication.processEvents()
                 if self.sezioneIndex != 0:
                     sel_sezione = self.sezione_values[self.sezioneIndex - 1]
-                    print('sel_selezione Ë {}'.format(sel_sezione))
+                    print('sel_selezione √® {}'.format(sel_sezione))
                     if sel_sezione == 'NULL' or sel_sezione == '':
                         self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
                         selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
@@ -677,7 +677,7 @@ class CduCreator:
                     sel_foglio = selectedF["FOGLIO".casefold()]
                     sel_particella = selectedF["MAPPALE".casefold()]
                 if self.lyr.selectedFeatureCount() > 1:
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: sono state trovate pi˘ particelle catastali con foglio: {} e mappale: {}, selezionare una sola particella\n'.format(sel_foglio, sel_particella)))
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: sono state trovate pi√π particelle catastali con foglio: {} e mappale: {}, selezionare una sola particella\n'.format(sel_foglio, sel_particella)))
                     return
 
             elif self.lyr.selectedFeatureCount() == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
@@ -752,7 +752,7 @@ class CduCreator:
                                             'OVERLAY': selected_feat,
                                             'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
                     except:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: sono stati riscontrati problemi nell\'intersezione fra la particella selezionata e il layer {}. Il CDU non verr‡ creato.\n'.format(layers_dict[key][1])))
+                        self.dlg.textLog.append(self.tr('ATTENZIONE: sono stati riscontrati problemi nell\'intersezione fra la particella selezionata e il layer {}. Il CDU non verr√† creato.\n'.format(layers_dict[key][1])))
                         QCoreApplication.processEvents()
                         rm_group = self.root.findGroup('temp')
                         if rm_group is not None:
@@ -900,7 +900,7 @@ class CduCreator:
                 else:
                     print('sezione si')
                     cdu_pdf_name = 'cdu_S_{}_F{}_M{}_{}.pdf'.format(sel_sezione, sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
-                #print('il nome file Ë {}'.format(cdu_pdf_name))
+                #print('il nome file √® {}'.format(cdu_pdf_name))
                 cdu_pdf_path = os.path.join(self.cdu_path_folder, cdu_pdf_name)
                 printer.setOutputFileName(cdu_pdf_path)
 
@@ -955,14 +955,14 @@ class CduCreator:
                 doc = QTextDocument()
                 doc.setHtml(stringa)
                 doc.print(printer)
-                self.dlg.textLog.append(self.tr('Il file PDF {} Ë stato salvato nella cartella {}.\n'.format(cdu_pdf_name, self.cdu_path_folder)))
+                self.dlg.textLog.append(self.tr('Il file PDF {} √® stato salvato nella cartella {}.\n'.format(cdu_pdf_name, self.cdu_path_folder)))
                 QCoreApplication.processEvents()
             else:
                 if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer. Il CDU non verr‡ creato.\n'.format(sel_foglio, sel_particella)))
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer. Il CDU non verr√† creato.\n'.format(sel_foglio, sel_particella)))
                     QCoreApplication.processEvents()
                 else:
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer. Il CDU non verr‡ creato.\n'.format(sel_sezione, sel_foglio, sel_particella)))
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer. Il CDU non verr√† creato.\n'.format(sel_sezione, sel_foglio, sel_particella)))
                     QCoreApplication.processEvents()
                     
             if self.sezioneIndex != 0:
