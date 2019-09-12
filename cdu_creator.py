@@ -84,8 +84,12 @@ class CduCreator:
         #self.aoiIndex = -1
         self.foglioIndex = 0
         self.show_values = []
+        self.sezioneIndex = 0
+        self.filter_s = ''
+        self.show_values_s = []
         self.particellaIndex = 0
         self.foglio_values = []
+        self.sezione_values = []
         self.gruppoIndex = 0
         self.out_tempdir_s = ''
         self.lyr = ''
@@ -253,6 +257,7 @@ class CduCreator:
                 self.dlg.clearButton.clicked.connect(self.clearButton)
                 self.dlg.helpButton.clicked.connect(self.openHelpButton)
                 self.dlg.foglioComboBox.currentIndexChanged.connect(self.foglioBox)
+                self.dlg.sezioneComboBox.currentIndexChanged.connect(self.sezioneBox)
                 self.dlg.particellaComboBox.currentIndexChanged.connect(self.particellaBox)
                 self.dlg.gruppoComboBox.currentIndexChanged.connect(self.gruppoBox)
                 self.dlg.logoButton.clicked.connect(self.importLogo)
@@ -272,6 +277,59 @@ class CduCreator:
         else:
             self.dlg.show()
             self.dlg.activateWindow()
+            
+    def sezioneBox(self, idxs):
+        #print('foglio')
+        #print(self.lyr)
+        self.sezioneIndex = idxs
+        print(self.sezioneIndex)
+        print(self.foglioIndex)
+        if self.sezioneIndex == 0:
+            #self.dlg.foglioComboBox.setEnabled(False)
+            uniquevalues_s = []
+            # #print(uniquevalues)
+            uniqueprovider_s = self.lyr.dataProvider()
+            fields = uniqueprovider_s.fields()
+            id_s = fields.lookupField('FOGLIO')
+            uniquevalues_s = list(uniqueprovider_s.uniqueValues( id_s ))
+            # #print(len(uniquevalues))
+            # #print(uniquevalues)
+            
+            self.show_values_s = []
+            for uvs in uniquevalues_s:
+                #print (uv)
+                if uvs != NULL and uvs != '':
+                    str_value_s = str(uvs)
+                    self.show_values_s.append(str_value_s)
+                # #str_values = str(uv).split("\\")
+                # #if len(str_values) > 1: #per percorsi regione veneto mettere 4
+                    # #show_values.append(str_values[1] + ' - ' + str_values[2]) #per percorsi regione veneto mettere 5 e 6
+            #print (self.show_values)
+            
+            self.show_values_s.sort()
+            self.dlg.foglioComboBox.clear()
+            self.dlg.foglioComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
+            self.dlg.foglioComboBox.addItems(svs for svs in self.show_values_s)    
+        else:
+            #self.dlg.foglioComboBox.setEnabled(True)
+            self.show_values_s = []
+            self.filter_s = self.dlg.sezioneComboBox.currentText()
+            print (self.filter_s)
+            if self.filter_s == 'NULL':
+                print('is null')
+                values_s = [feat_s['FOGLIO'.casefold()] for feat_s in self.lyr.getFeatures() if feat_s['SEZIONE'.casefold()] == None]
+            else:
+                print('is not null')
+                values_s = [feat_s['FOGLIO'.casefold()] for feat_s in self.lyr.getFeatures() if feat_s['SEZIONE'.casefold()] == self.filter_s]
+            list_val_s = set(values_s)
+            for uvs in list_val_s:
+                if uvs != '' and uvs != NULL:
+                    self.show_values_s.append(uvs)
+            print(self.show_values_s)
+            self.show_values_s.sort()
+            self.dlg.foglioComboBox.clear()        
+            self.dlg.foglioComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
+            self.dlg.foglioComboBox.addItems(sv for sv in self.show_values_s)
             
     def foglioBox(self, idxf):
         #print('foglio')
@@ -303,6 +361,25 @@ class CduCreator:
             self.dlg.particellaComboBox.clear()
             self.dlg.particellaComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
             self.dlg.particellaComboBox.addItems(sv for sv in self.show_values)
+        elif self.foglioIndex != 0 and self.sezioneIndex != 0:
+            self.dlg.particellaComboBox.setEnabled(True)
+            self.show_values = []
+            filter = self.dlg.foglioComboBox.currentText()
+            print (self.filter_s)
+            if self.filter_s == 'NULL':
+                values = [feat['MAPPALE'.casefold()] for feat in self.lyr.getFeatures() if feat['FOGLIO'.casefold()] == filter if feat['SEZIONE'.casefold()] == None]
+            else:
+                values = [feat['MAPPALE'.casefold()] for feat in self.lyr.getFeatures() if feat['FOGLIO'.casefold()] == filter if feat['SEZIONE'.casefold()] == self.filter_s]
+            list_val = set(values)
+            for uv in list_val:
+                if uv != '' and uv != NULL:
+                    self.show_values.append(uv)
+            
+            self.show_values.sort()
+            self.dlg.particellaComboBox.clear()        
+            self.dlg.particellaComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
+            self.dlg.particellaComboBox.addItems(sv for sv in self.show_values)
+            
         else:
             self.dlg.particellaComboBox.setEnabled(True)
             self.show_values = []
@@ -311,7 +388,7 @@ class CduCreator:
             values = [feat['MAPPALE'.casefold()] for feat in self.lyr.getFeatures() if feat['FOGLIO'.casefold()] == filter]
             list_val = set(values)
             for uv in list_val:
-                if uv != '':
+                if uv != '' and uv != NULL:
                     self.show_values.append(uv)
             
             self.show_values.sort()
@@ -320,10 +397,28 @@ class CduCreator:
             self.dlg.particellaComboBox.addItems(sv for sv in self.show_values)
             
     def particellaBox(self, idxp):
-        print('fai qualcosa')
+        #print('fai qualcosa')
         self.particellaIndex = idxp
-        print(self.particellaIndex)
+        #print(self.particellaIndex)
         #vlayer = self.dlg.catastoComboBox.currentLayer()
+        
+    def popComboSezione(self):
+        uniqueprovider_sez = self.lyr.dataProvider()
+        fields_sez = uniqueprovider_sez.fields()
+        unique_sezione = []
+        id_sezione = fields_sez.lookupField('SEZIONE') 
+        unique_sezione = list(uniqueprovider_sez.uniqueValues( id_sezione ))
+
+        self.sezione_values = []
+        for uv_s in unique_sezione:
+            #if uv_s != NULL:
+            str_value_s = str(uv_s)
+            self.sezione_values.append(str_value_s)
+                
+        self.sezione_values.sort()
+        self.dlg.sezioneComboBox.clear()
+        self.dlg.sezioneComboBox.addItem('')
+        self.dlg.sezioneComboBox.addItems(fvs for fvs in self.sezione_values)
         
     def popComboFoglio(self):
         uniqueprovider = self.lyr.dataProvider()
@@ -424,7 +519,8 @@ class CduCreator:
             # webbrowser.open('https://chm-from-lidar-manuale.readthedocs.io/en/latest/')
         
     def prepRun(self):
-            
+    
+        self.popComboSezione()
         self.popComboFoglio()
         
         self.root = QgsProject.instance().layerTreeRoot()
@@ -453,6 +549,7 @@ class CduCreator:
         self.dlg.clearButton.clicked.disconnect(self.clearButton)
         self.dlg.helpButton.clicked.disconnect(self.openHelpButton)
         self.dlg.foglioComboBox.currentIndexChanged.disconnect(self.foglioBox)
+        self.dlg.sezioneComboBox.currentIndexChanged.disconnect(self.sezioneBox)
         self.dlg.particellaComboBox.currentIndexChanged.disconnect(self.particellaBox)
         self.dlg.gruppoComboBox.currentIndexChanged.disconnect(self.gruppoBox)
         self.dlg.logoButton.clicked.disconnect(self.importLogo)
@@ -469,8 +566,12 @@ class CduCreator:
         #self.aoiIndex = -1
         self.foglioIndex = 0
         self.show_values = []
+        self.sezioneIndex = 0
+        self.filter_s = ''
+        self.show_values_s = []
         self.particellaIndex = 0
         self.foglio_values = []
+        self.sezione_values = []
         self.gruppoIndex = 0
         self.out_tempdir_s = ''
         self.lyr = ''
@@ -536,8 +637,9 @@ class CduCreator:
             selectedGroup = self.group_names[selectedGroupIndex - 1]
             print (selectedGroup)
             
-            if self.lyr.selectedFeatureCount() > 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
+            if self.lyr.selectedFeatureCount() > 0 and self.sezioneIndex == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
                 selectedF = self.lyr.selectedFeatures()[0]
+                sel_sezione = selectedF["SEZIONE".casefold()]
                 sel_foglio = selectedF["FOGLIO".casefold()]
                 print(sel_foglio)
                 sel_particella = selectedF["MAPPALE".casefold()]
@@ -549,16 +651,35 @@ class CduCreator:
                     selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
                     print(selected_feat)
             elif self.foglioIndex != 0 and self.particellaIndex != 0:
-                sel_foglio = self.foglio_values[self.foglioIndex - 1]
-                #print(sel_foglio)
+                #print('sel_sezione = {}'.format(sel_sezione))
+                sel_foglio = self.show_values_s[self.foglioIndex - 1]
+                #print('sel_foglio è {}'.format(sel_foglio))
                 sel_particella = self.show_values[self.particellaIndex - 1]
                 #print(sel_particella)
                 if self.lyr.selectedFeatureCount() > 0:
                     self.dlg.textLog.append(self.tr('ATTENZIONE: era giÃ  presente una selezione nel layer terreni_catastali, verrÃ  sovrascritta con la particella foglio: {} e mappale: {}.\n'.format(sel_foglio, sel_particella)))
                     QCoreApplication.processEvents()
+                if self.sezioneIndex != 0:
+                    sel_sezione = self.sezione_values[self.sezioneIndex - 1]
+                    print('sel_selezione è {}'.format(sel_sezione))
+                    if sel_sezione == 'NULL' or sel_sezione == '':
+                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                        selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
+                    else:
+                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), sel_sezione, 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                        selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
+                else:
+                    print('sono in sezione == 0')
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}'".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                    selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
+                    selectedF = self.lyr.selectedFeatures()[0]
+                    sel_sezione = selectedF["SEZIONE".casefold()]
+                    sel_foglio = selectedF["FOGLIO".casefold()]
+                    sel_particella = selectedF["MAPPALE".casefold()]
+                if self.lyr.selectedFeatureCount() > 1:
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: sono state trovate più particelle catastali con foglio: {} e mappale: {}, selezionare una sola particella\n'.format(sel_foglio, sel_particella)))
+                    return
 
-                self.lyr.selectByExpression("{}={} AND {}={}".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
-                selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
             elif self.lyr.selectedFeatureCount() == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
                 self.dlg.textLog.append(self.tr('ATTENZIONE: nessuna particella Ã¨ stata selezionata, selezionare un mappale\n'))
                 return
@@ -626,9 +747,20 @@ class CduCreator:
                 for key, value in layers_dict.items():
                     #print(key)
                     file_name = 'intersect_{}.gpkg'.format(shp_count)
-                    processing.run("native:clip", {'INPUT': key,
-                                        'OVERLAY': selected_feat,
-                                        'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
+                    try:
+                        processing.run("native:clip", {'INPUT': key,
+                                            'OVERLAY': selected_feat,
+                                            'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
+                    except:
+                        self.dlg.textLog.append(self.tr('ATTENZIONE: sono stati riscontrati problemi nell\'intersezione fra la particella selezionata e il layer {}. Il CDU non verrà creato.\n'.format(layers_dict[key][1])))
+                        QCoreApplication.processEvents()
+                        rm_group = self.root.findGroup('temp')
+                        if rm_group is not None:
+                            for child in rm_group.children():
+                                QgsProject.instance().removeMapLayer(child.layerId())
+                            self.root.removeChildNode(rm_group)
+                        map.refresh()
+                        return
 
                     int_lyr_pathfile = os.path.join(out_tempdir.name, file_name)
                     int_lyr_name = file_name.split('.')
@@ -761,7 +893,14 @@ class CduCreator:
                 #printer.setPageMargins(10, 10, 10, 10, QPrinter.Millimeter)
                 printer.setFullPage(True)
                 printer.setOutputFormat(QPrinter.PdfFormat)
-                cdu_pdf_name = 'cdu_F{}_M{}_{}.pdf'.format(sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                
+                if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
+                    print('sezione no')
+                    cdu_pdf_name = 'cdu_F{}_M{}_{}.pdf'.format(sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                else:
+                    print('sezione si')
+                    cdu_pdf_name = 'cdu_S_{}_F{}_M{}_{}.pdf'.format(sel_sezione, sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                #print('il nome file è {}'.format(cdu_pdf_name))
                 cdu_pdf_path = os.path.join(self.cdu_path_folder, cdu_pdf_name)
                 printer.setOutputFileName(cdu_pdf_path)
 
@@ -799,7 +938,10 @@ class CduCreator:
                         self.dlg.textLog.append(self.tr('ATTENZIONE: il file TXT {} non Ã¨ stato trovato, il Testo non verrÃ  stampato.\n'.format(self.input_txt_path)))
                         QCoreApplication.processEvents()
                 stringa += '<h3 style="text-align:center">Attesta e Certifica che</h3>'
-                stringa += '<p> Il terreno oggetto della richiesta e distinto in Catasto al foglio <b>' + sel_foglio + '</b> con il mappale <b>' + sel_particella + '</b> interseca le seguenti mappe del <b>' + selectedGroup + '</b>:<br></p>'
+                if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
+                    stringa += '<p> Il terreno oggetto della richiesta e distinto in Catasto al foglio <b>' + sel_foglio + '</b> con il mappale <b>' + sel_particella + '</b> interseca le seguenti mappe del <b>' + selectedGroup + '</b>:<br></p>'
+                else:
+                    stringa += '<p> Il terreno oggetto della richiesta e distinto in Catasto alla sezione <b>' + sel_sezione + '</b> e al foglio <b>' + sel_foglio + '</b> con il mappale <b>' + sel_particella + '</b> interseca le seguenti mappe del <b>' + selectedGroup + '</b>:<br></p>'
                 for key, value in print_dict.items():
                     if self.checkAreaBox == True:
                         stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br>' + value[5] + '<br><br></p>'
@@ -813,11 +955,28 @@ class CduCreator:
                 doc = QTextDocument()
                 doc.setHtml(stringa)
                 doc.print(printer)
-            else:
-                self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer. Il CDU non verrÃ  creato.\n'.format(sel_foglio, sel_particella)))
+                self.dlg.textLog.append(self.tr('Il file PDF {} è stato salvato nella cartella {}.\n'.format(cdu_pdf_name, self.cdu_path_folder)))
                 QCoreApplication.processEvents()
-            
-            self.lyr.selectByExpression("{}={} AND {}={}".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+            else:
+                if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer. Il CDU non verrà creato.\n'.format(sel_foglio, sel_particella)))
+                    QCoreApplication.processEvents()
+                else:
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer. Il CDU non verrà creato.\n'.format(sel_sezione, sel_foglio, sel_particella)))
+                    QCoreApplication.processEvents()
+                    
+            if self.sezioneIndex != 0:
+                if sel_sezione == 'NULL' or sel_sezione == '':
+                    self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                else:
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), sel_sezione, 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                    selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
+            else:
+                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+            # if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-':
+                # self.lyr.selectByExpression("{}='{}' AND {}='{}'".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+            # else:
+                # self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), sel_sezione, 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
             
             #rimuove il gruppo temporaneo
             rm_group = self.root.findGroup('temp')
@@ -827,7 +986,5 @@ class CduCreator:
                 self.root.removeChildNode(rm_group)
             map.refresh()
             
-            self.dlg.textLog.append(self.tr('Il file PDF {} Ã¨ stato salvato nella cartella {}.\n'.format(cdu_pdf_name, self.cdu_path_folder)))
-            QCoreApplication.processEvents()
             self.dlg.textLog.append(self.tr('PROCESSO TERMINATO...\n'))
             QCoreApplication.processEvents()
