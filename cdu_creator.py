@@ -21,7 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QDir, QSize
+from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QDir, QSize, QDate, Qt
 from PyQt5.QtGui import QIcon, QPainter, QImage, QTextDocument
 from PyQt5.QtWidgets import QAction, QFileDialog, QMessageBox, QProgressBar, QDialog, QCheckBox
 from PyQt5.QtPrintSupport import QPrinter
@@ -101,6 +101,11 @@ class CduCreator:
         self.checkAreaBox = False
         self.root = ''
         self.input_txt_path = ''
+        self.cdu_file_name = ''
+        self.protocollo = ''
+        self.richiedente = ''
+        self.data = QDate.currentDate()
+        self.checkDataBox = False
         
         
 
@@ -206,7 +211,7 @@ class CduCreator:
 
         # will be set False in run()
         self.first_start = True
-        print('sono in initgui')
+        #print('sono in initgui')
         self.dlg = CduCreatorDialog()
 
     def unload(self):
@@ -219,6 +224,7 @@ class CduCreator:
             
     def pressIcon(self):
         if not self.pluginIsActive:
+            print(self.data)
             self.pluginIsActive = True
             self.dlg = CduCreatorDialog()
             
@@ -248,7 +254,7 @@ class CduCreator:
                 param_file = open(self.param_txt, "w+")
                 param_file.close()
 
-            print(self.lyr)
+            #print(self.lyr)
             if QgsProject.instance().mapLayersByName('terreni_catastali'):
                 self.lyr = QgsProject.instance().mapLayersByName('terreni_catastali')[0]
                         
@@ -266,6 +272,13 @@ class CduCreator:
                 self.dlg.urlTxt.textChanged.connect(self.handleTxt)
                 self.dlg.titolo.textChanged.connect(self.handleTitle)
                 self.dlg.nomeComune.textChanged.connect(self.handleComune)
+                self.dlg.nameLineEdit.textChanged.connect(self.handleFileName)
+                self.dlg.protocolloLineEdit.textChanged.connect(self.handleProtocollo)
+                self.dlg.richiedenteEdit.textChanged.connect(self.handleRichiedente)
+                self.dlg.DataCheckBox.stateChanged.connect(self.handleDataCheck)
+                self.dlg.dateEdit.setDate(QDate.currentDate())
+                #self.dlg.dateEdit.setDate(QDate(2019, 9, 13))
+                self.dlg.dateEdit.dateChanged.connect(self.handleData)
                 self.dlg.printAreaBox.stateChanged.connect(self.handleAreaBox)
                 self.dlg.pushButtonOk.clicked.connect(self.run)
                 self.dlg.rejected.connect(self.closePlugin)
@@ -282,8 +295,8 @@ class CduCreator:
         #print('foglio')
         #print(self.lyr)
         self.sezioneIndex = idxs
-        print(self.sezioneIndex)
-        print(self.foglioIndex)
+        #print('sezione index è {}'.format(self.sezioneIndex))
+        #print(self.foglioIndex)
         if self.sezioneIndex == 0:
             #self.dlg.foglioComboBox.setEnabled(False)
             uniquevalues_s = []
@@ -311,25 +324,48 @@ class CduCreator:
             self.dlg.foglioComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
             self.dlg.foglioComboBox.addItems(svs for svs in self.show_values_s)    
         else:
+            if self.lyr.fields().lookupField('SEZIONE') != -1:
             #self.dlg.foglioComboBox.setEnabled(True)
-            self.show_values_s = []
-            self.filter_s = self.dlg.sezioneComboBox.currentText()
-            print (self.filter_s)
-            if self.filter_s == 'NULL':
-                print('is null')
-                values_s = [feat_s['FOGLIO'.casefold()] for feat_s in self.lyr.getFeatures() if feat_s['SEZIONE'.casefold()] == None]
+                self.show_values_s = []
+                self.filter_s = self.dlg.sezioneComboBox.currentText()
+                print (self.filter_s)
+                if self.filter_s == 'NULL':
+                    print('is null')
+                    values_s = [feat_s['FOGLIO'.casefold()] for feat_s in self.lyr.getFeatures() if feat_s['SEZIONE'.casefold()] == None]
+                else:
+                    print('is not null')
+                    values_s = [feat_s['FOGLIO'.casefold()] for feat_s in self.lyr.getFeatures() if feat_s['SEZIONE'.casefold()] == self.filter_s]
+                list_val_s = set(values_s)
+                for uvs in list_val_s:
+                    if uvs != '' and uvs != NULL:
+                        self.show_values_s.append(uvs)
+                print(self.show_values_s)
+                self.show_values_s.sort()
+                self.dlg.foglioComboBox.clear()        
+                self.dlg.foglioComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
+                self.dlg.foglioComboBox.addItems(sv for sv in self.show_values_s)
             else:
-                print('is not null')
-                values_s = [feat_s['FOGLIO'.casefold()] for feat_s in self.lyr.getFeatures() if feat_s['SEZIONE'.casefold()] == self.filter_s]
-            list_val_s = set(values_s)
-            for uvs in list_val_s:
-                if uvs != '' and uvs != NULL:
-                    self.show_values_s.append(uvs)
-            print(self.show_values_s)
-            self.show_values_s.sort()
-            self.dlg.foglioComboBox.clear()        
-            self.dlg.foglioComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
-            self.dlg.foglioComboBox.addItems(sv for sv in self.show_values_s)
+                uniquevalues_s = []
+                # #print(uniquevalues)
+                uniqueprovider_s = self.lyr.dataProvider()
+                fields = uniqueprovider_s.fields()
+                id_s = fields.lookupField('FOGLIO')
+                uniquevalues_s = list(uniqueprovider_s.uniqueValues( id_s ))
+                self.show_values_s = []
+                for uvs in uniquevalues_s:
+                    #print (uv)
+                    if uvs != NULL and uvs != '':
+                        str_value_s = str(uvs)
+                        self.show_values_s.append(str_value_s)
+                    # #str_values = str(uv).split("\\")
+                    # #if len(str_values) > 1: #per percorsi regione veneto mettere 4
+                        # #show_values.append(str_values[1] + ' - ' + str_values[2]) #per percorsi regione veneto mettere 5 e 6
+                #print (self.show_values)
+                
+                self.show_values_s.sort()
+                self.dlg.foglioComboBox.clear()
+                self.dlg.foglioComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
+                self.dlg.foglioComboBox.addItems(svs for svs in self.show_values_s) 
             
     def foglioBox(self, idxf):
         #print('foglio')
@@ -406,19 +442,22 @@ class CduCreator:
         uniqueprovider_sez = self.lyr.dataProvider()
         fields_sez = uniqueprovider_sez.fields()
         unique_sezione = []
-        id_sezione = fields_sez.lookupField('SEZIONE') 
-        unique_sezione = list(uniqueprovider_sez.uniqueValues( id_sezione ))
+        id_sezione = fields_sez.lookupField('SEZIONE')
+        if id_sezione != -1:
+            unique_sezione = list(uniqueprovider_sez.uniqueValues( id_sezione ))
 
-        self.sezione_values = []
-        for uv_s in unique_sezione:
-            #if uv_s != NULL:
-            str_value_s = str(uv_s)
-            self.sezione_values.append(str_value_s)
-                
-        self.sezione_values.sort()
-        self.dlg.sezioneComboBox.clear()
-        self.dlg.sezioneComboBox.addItem('')
-        self.dlg.sezioneComboBox.addItems(fvs for fvs in self.sezione_values)
+            self.sezione_values = []
+            for uv_s in unique_sezione:
+                #if uv_s != NULL:
+                str_value_s = str(uv_s)
+                self.sezione_values.append(str_value_s)
+                    
+            self.sezione_values.sort()
+            self.dlg.sezioneComboBox.clear()
+            self.dlg.sezioneComboBox.addItem('')
+            self.dlg.sezioneComboBox.addItems(fvs for fvs in self.sezione_values)
+        else:
+            self.sezioneBox(self.sezioneIndex)
         
     def popComboFoglio(self):
         uniqueprovider = self.lyr.dataProvider()
@@ -451,21 +490,49 @@ class CduCreator:
         return unique_list
         
     def gruppoBox(self, idxg):
-        print('gruppo')
+        #print('gruppo')
         self.gruppoIndex = idxg
-        print(self.gruppoIndex)
+        #print(self.gruppoIndex)
         #vlayer = self.dlg.catastoComboBox.currentLayer()
+        
+    def handleProtocollo(self, val):
+        self.protocollo = val
+        
+    def handleRichiedente(self, val):
+        self.richiedente = val
+        
+    def handleDataCheck(self):
+        if self.dlg.DataCheckBox.isChecked() == True:
+            self.checkDataBox = True
+            self.dlg.label_11.setEnabled(True)
+            self.dlg.dateEdit.setEnabled(True)
+            print('check')
+        else:
+            self.checkDataBox = False
+            self.dlg.label_11.setEnabled(False)
+            self.dlg.dateEdit.setEnabled(False)
+            print('ucheck')
+        
+    def handleData(self, val):
+        self.data = val
+        #self.dlg.dateEdit.setDate(QDate.currentDate())
+        print(self.data.toString(Qt.ISODate))
+        print(self.data.month())
+        print(self.data.day())
         
     def exportCduButton(self):
         self.cdu_out_folder = QFileDialog.getExistingDirectory()
         self.cdu_path_folder = QDir.toNativeSeparators(self.cdu_out_folder)
-        print (self.cdu_out_folder)
+        #print (self.cdu_out_folder)
         print (self.cdu_path_folder)
         cdu_txt_folder = self.dlg.OutFolder.setText(self.cdu_path_folder)
         
     def handleOutFolder(self, val):
         self.cdu_path_folder = val
         print(self.cdu_path_folder)
+        
+    def handleFileName(self, val):
+        self.cdu_file_name = val
         
     def handleTitle(self, val):
         self.CduTitle = val
@@ -476,7 +543,7 @@ class CduCreator:
         print(self.CduComune)
         
     def importLogo(self):
-        self.input_logo, _filter = QFileDialog.getOpenFileName(None, "Open ", '.', "(*.png)")
+        self.input_logo, _filter = QFileDialog.getOpenFileName(None, "Open ", '.', "(*.png *.jpg)")
         print (self.input_logo)
         self.input_logo_path = QDir.toNativeSeparators(self.input_logo)
         #print (self.input_logo)
@@ -558,6 +625,11 @@ class CduCreator:
         self.dlg.urlTxt.textChanged.disconnect(self.handleTxt)
         self.dlg.titolo.textChanged.disconnect(self.handleTitle)
         self.dlg.nomeComune.textChanged.disconnect(self.handleComune)
+        self.dlg.nameLineEdit.textChanged.disconnect(self.handleFileName)
+        self.dlg.protocolloLineEdit.textChanged.disconnect(self.handleProtocollo)
+        self.dlg.richiedenteEdit.textChanged.disconnect(self.handleRichiedente)
+        self.dlg.DataCheckBox.stateChanged.disconnect(self.handleDataCheck)
+        self.dlg.dateEdit.dateChanged.connect(self.handleData)
         self.dlg.printAreaBox.stateChanged.disconnect(self.handleAreaBox)
         self.dlg.pushButtonOk.clicked.disconnect(self.run)
         self.dlg.rejected.disconnect(self.closePlugin)
@@ -583,6 +655,11 @@ class CduCreator:
         self.checkAreaBox = False
         self.root = ''
         self.input_txt_path = ''
+        self.cdu_file_name = ''
+        self.protocollo = ''
+        self.richiedente = ''
+        self.data = QDate.currentDate()
+        self.checkDataBox = False
         
         
         if self.out_tempdir_s != '':
@@ -595,6 +672,8 @@ class CduCreator:
             
 
     def run(self):
+        #print(show_values_s)
+        print(self.sezioneIndex)
         self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\n'))
         QCoreApplication.processEvents()
         
@@ -639,7 +718,10 @@ class CduCreator:
             
             if self.lyr.selectedFeatureCount() > 0 and self.sezioneIndex == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
                 selectedF = self.lyr.selectedFeatures()[0]
-                sel_sezione = selectedF["SEZIONE".casefold()]
+                if self.lyr.fields().lookupField("SEZIONE") != -1:
+                    sel_sezione = selectedF["SEZIONE".casefold()]
+                else:
+                    sel_sezione = 'NULL'
                 sel_foglio = selectedF["FOGLIO".casefold()]
                 print(sel_foglio)
                 sel_particella = selectedF["MAPPALE".casefold()]
@@ -661,7 +743,7 @@ class CduCreator:
                     QCoreApplication.processEvents()
                 if self.sezioneIndex != 0:
                     sel_sezione = self.sezione_values[self.sezioneIndex - 1]
-                    print('sel_selezione è {}'.format(sel_sezione))
+                    print('sel_sezione è {}'.format(sel_sezione))
                     if sel_sezione == 'NULL' or sel_sezione == '':
                         self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
                         selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
@@ -673,7 +755,10 @@ class CduCreator:
                     self.lyr.selectByExpression("{}='{}' AND {}='{}'".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
                     selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
                     selectedF = self.lyr.selectedFeatures()[0]
-                    sel_sezione = selectedF["SEZIONE".casefold()]
+                    if self.lyr.fields().lookupField("SEZIONE") != -1:
+                        sel_sezione = selectedF["SEZIONE".casefold()]
+                    else:
+                        sel_sezione = 'NULL'
                     sel_foglio = selectedF["FOGLIO".casefold()]
                     sel_particella = selectedF["MAPPALE".casefold()]
                 if self.lyr.selectedFeatureCount() > 1:
@@ -893,13 +978,15 @@ class CduCreator:
                 #printer.setPageMargins(10, 10, 10, 10, QPrinter.Millimeter)
                 printer.setFullPage(True)
                 printer.setOutputFormat(QPrinter.PdfFormat)
-                
-                if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
-                    print('sezione no')
-                    cdu_pdf_name = 'cdu_F{}_M{}_{}.pdf'.format(sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                if self.cdu_file_name == '':
+                    if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
+                        print('sezione no')
+                        cdu_pdf_name = 'cdu_F{}_M{}_{}.pdf'.format(sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                    else:
+                        print('sezione si')
+                        cdu_pdf_name = 'cdu_S_{}_F{}_M{}_{}.pdf'.format(sel_sezione, sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
                 else:
-                    print('sezione si')
-                    cdu_pdf_name = 'cdu_S_{}_F{}_M{}_{}.pdf'.format(sel_sezione, sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                    cdu_pdf_name = '{}.pdf'.format(self.cdu_file_name)
                 #print('il nome file è {}'.format(cdu_pdf_name))
                 cdu_pdf_path = os.path.join(self.cdu_path_folder, cdu_pdf_name)
                 printer.setOutputFileName(cdu_pdf_path)
@@ -920,13 +1007,31 @@ class CduCreator:
                     if os.path.isfile(self.input_logo_path):
                         stringa += '<p style="text-align:center; vertical-align: middle;"><img height="60" src="' + self.input_logo_path + '"></p>'
                     else:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: il file PNG {} non è stato trovato, il Logo non verrà stampato.\n'.format(self.input_logo_path)))
+                        self.dlg.textLog.append(self.tr('ATTENZIONE: il file {} non è stato trovato, il Logo non verrà stampato.\n'.format(self.input_logo_path)))
                         QCoreApplication.processEvents()
                 stringa += '<h2 style="text-align:center">' + self.CduTitle + ' - Comune di ' + self.CduComune + '</h2>'
                 stringa += '<hr><br>'
-                stringa += '<p>Prot. n°<br>Lì,</p>'
+                if self.protocollo == '':
+                    stringa += '<p>Prot. n°<br>'
+                else:
+                    stringa += '<p>Prot. n° ' + self.protocollo + '<br>'
+                if self.checkDataBox == False:
+                    stringa += 'Lì, </p>'
+                else:
+                    stringa += 'Lì, ' + self.data.toString( Qt.DefaultLocaleShortDate) + '</p>'
                 stringa += '<h3 style="text-align:center">Il Responsabile del Servizio</h3>'
-                stringa += '<p>Vista la richiesta del _____________________________ presentata in data ____/____/____ prot. n. ________;<br></p>'
+                if self.richiedente == '':
+                    stringa += '<p>Vista la richiesta del _________________________________________________________________________ <br><br>'
+                else:
+                    stringa += '<p>Vista la richiesta del <i>' + self.richiedente + ' </i>'
+                if self.checkDataBox == False:
+                    stringa += 'presentata in data ____/____/____ '
+                else:
+                    stringa += 'presentata in data <i>' + self.data.toString( Qt.DefaultLocaleShortDate) + '  </i>'
+                if self.protocollo == '':
+                    stringa += 'prot. n. ________;<br></p>'
+                else:
+                    stringa += 'prot. n. <i>' + self.protocollo + '</i>;<br></p>'
                 if self.input_txt_path != '':
                     if os.path.isfile(self.input_txt_path):
                         txt_file = open(self.input_txt_path, "r")
