@@ -14,7 +14,18 @@ version=0.1
 author=Roberta Fagandini (Gter srl) - Roberto Marzocchi (Gter srl)
 email=assistenzagis@gter.it
 
-about=This plugin creates the CDU (Certificato di Destinazione Urbanistica) using the vector layer of cadastre (parcels) and the vector layers of the urban plan. The selected parcel is intersected with the overlapping layers of the urban plan and the information from the related attribute tables are then printed in the final output. The output is a .pdf file containing all the information, related to the selected parcel, extracted through the intersection process. The .pdf file can be customized adding a logo, a title and a text paragraph (e.g. introduction, legislative references, etc.). All the other information printed in the final CDU file are instead retrieved by the plugin.
+about=
+    This plugin creates the CDU (Certificato di Destinazione Urbanistica) using the vector layer of cadastre (parcels) and the vector layers of the urban plan. 
+    The selected parcel is intersected with the overlapping layers of the urban plan and the information from the related attribute tables are then printed in the final output. 
+    The output is a .pdf file containing all the information, related to the selected parcel, extracted through the intersection process. 
+    The .pdf file can be customized adding a logo, a title and a text paragraph (e.g. introduction, legislative references, etc.). 
+    The Plugin CDU Creator has been written in Italian since it refers to an italian regulation regarding urban planning.
+    
+    Questo plugin compila il CDU (Certificato di Destinazione Urbanistica) utilizzando il layer vettoriale del catasto terreni a i layers vettoriali dello strumento urbanistico.
+    La particella selezionata è intersecata con i layers dello strumento urbanistico da cui vengono recuperate le informazioni da stampare nel file di output finale.
+    L'output è un file .pdf contenete tutte le informazioni, relative alla particella selezionata, estratte tramite il processo di intersezione.
+    Il file .pdf può essere personalizzato aggiungendo un logo, un titolo e un paragrafo di testo contente eventuali diciture, riferimenti normativi, ecc.
+    Il Plugin CDU Creator è stato scritto in italiano in quanto fa riferimento a una normativa italiana riguardante l'urbanistica.
 
 tracker=https://github.com/gtergeomatica/cdu_creator/issues
 repository=https://github.com/gtergeomatica/cdu_creator
@@ -28,7 +39,7 @@ changelog=
         * First public release 
 
 # Tags are comma separated with spaces allowed
-tags=CDU catasto cdu_creator PDF
+tags=CDU, catasto, cdu_creator, PDF, urbanistica
 
 homepage=https://github.com/gtergeomatica/cdu_creator
 category=Plugins
