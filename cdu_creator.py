@@ -966,6 +966,7 @@ class CduCreator:
                 print_layers = layers.copy()
                 print_layers.insert(0, img_layers[0])
                 print_layers.insert(0, img_layers2[0])
+                settings.setDestinationCrs(iface.mapCanvas().mapSettings().destinationCrs())
                 settings.setLayers(print_layers)
                 rect = QgsRectangle(box)
                 rect.scale(2.5)
