@@ -229,6 +229,7 @@ class CduCreator:
             self.iface.removeToolBarIcon(action)
             
     def pressIcon(self):
+        print(self.pluginIsActive)
         if not self.pluginIsActive:
             #print(self.data)
             self.pluginIsActive = True
@@ -308,13 +309,18 @@ class CduCreator:
             
     def sezioneBox(self, idxs):
         #print('sezione')
-
+        print(self.pluginIsActive)
         self.sezioneIndex = idxs
         self.check_f = 0
         self.check_m = 0
         self.check_s = 0
         self.catasto_alias = self.lyr.attributeAliases()
-        #print(self.catasto_alias)
+        if self.catasto_alias == {}:
+            fi = 0
+            for field in self.lyr.fields():
+                self.lyr.setFieldAlias(fi, None)
+                fi += 1
+            self.catasto_alias = self.lyr.attributeAliases()
         for key_c, values_c in self.catasto_alias.items():
             if values_c.casefold() == 'SEZIONE'.casefold() or key_c.casefold() == 'SEZIONE'.casefold():
                 self.sez_list.insert(0, key_c)
