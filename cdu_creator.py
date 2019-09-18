@@ -1108,7 +1108,8 @@ class CduCreator:
                     writer.setFormat(QByteArray(b'ODF'))
                     writer.setFileName(cdu_odt_path)
                     writer.write(doc)
-                    
+                    self.dlg.textLog.append(self.tr('Il file ODT {} è stato salvato nella cartella {}.\n'.format(cdu_odt_name, self.cdu_path_folder)))
+                    QCoreApplication.processEvents()
             else:
                 if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
                     self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer. Il CDU non verrà creato.\n'.format(sel_foglio, sel_particella)))
