@@ -301,6 +301,7 @@ class CduCreator:
                 self.dlg.show()
             else:
                 self.iface.messageBar().pushMessage("ATTENZIONE", "Il layer terreni_catastali non è caricato nel progetto.", level=Qgis.Critical, duration=4)
+                self.pluginIsActive = False
         else:
             self.dlg.show()
             self.dlg.activateWindow()
