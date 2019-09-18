@@ -21,8 +21,8 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QDir, QSize, QDate, Qt
-from PyQt5.QtGui import QIcon, QPainter, QImage, QTextDocument
+from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QDir, QSize, QDate, Qt, QByteArray
+from PyQt5.QtGui import QIcon, QPainter, QImage, QTextDocument, QTextDocumentWriter
 from PyQt5.QtWidgets import QAction, QFileDialog, QMessageBox, QProgressBar, QDialog, QCheckBox
 from PyQt5.QtPrintSupport import QPrinter
 from PyQt5.QtXml import QDomDocument
@@ -41,6 +41,7 @@ import webbrowser
 import tempfile
 import shutil
 from shutil import copyfile
+from PIL import Image
 
 class CduCreator:
     """QGIS Plugin Implementation."""
@@ -106,6 +107,11 @@ class CduCreator:
         self.richiedente = ''
         self.data = QDate.currentDate()
         self.checkDataBox = False
+        self.sez_list = []
+        self.fog_list = []
+        self.map_list = []
+        self.catasto_alias = {}
+        self.checkOdtBox = False
         
         
 
@@ -224,7 +230,7 @@ class CduCreator:
             
     def pressIcon(self):
         if not self.pluginIsActive:
-            print(self.data)
+            #print(self.data)
             self.pluginIsActive = True
             self.dlg = CduCreatorDialog()
             
@@ -233,12 +239,19 @@ class CduCreator:
                 param_file = open(self.param_txt, "r")
                 param = param_file.readlines()
                 self.cdu_path_folder = param[0].strip()
-                self.CduTitle = param[1].strip()
-                self.CduComune = param[2].strip()
-                self.input_logo_path = param[3].strip()
-                self.input_txt_path = param[4].strip()
-                self.checkAreaBox = param[5].strip()
+                self.checkOdtBox = param[1].strip()
+                self.CduTitle = param[2].strip()
+                self.CduComune = param[3].strip()
+                self.input_logo_path = param[4].strip()
+                self.input_txt_path = param[5].strip()
+                self.checkAreaBox = param[6].strip()
                 self.dlg.OutFolder.setText(self.cdu_path_folder)
+                if self.checkOdtBox == 'True':
+                    self.checkOdtBox = True
+                    self.dlg.odtCheckBox.setChecked(True)
+                else:
+                    self.checkOdtBox = False
+                    self.dlg.odtCheckBox.setChecked(False)
                 self.dlg.titolo.setText(self.CduTitle)
                 self.dlg.nomeComune.setText(self.CduComune)
                 self.dlg.urlLogo.setText(self.input_logo_path)
@@ -280,6 +293,7 @@ class CduCreator:
                 #self.dlg.dateEdit.setDate(QDate(2019, 9, 13))
                 self.dlg.dateEdit.dateChanged.connect(self.handleData)
                 self.dlg.printAreaBox.stateChanged.connect(self.handleAreaBox)
+                self.dlg.odtCheckBox.stateChanged.connect(self.handleOdtFile)
                 self.dlg.pushButtonOk.clicked.connect(self.run)
                 self.dlg.rejected.connect(self.closePlugin)
                 
@@ -292,18 +306,43 @@ class CduCreator:
             self.dlg.activateWindow()
             
     def sezioneBox(self, idxs):
-        #print('foglio')
-        #print(self.lyr)
+        #print('sezione')
+
         self.sezioneIndex = idxs
-        #print('sezione index è {}'.format(self.sezioneIndex))
+        self.check_f = 0
+        self.check_m = 0
+        self.check_s = 0
+        self.catasto_alias = self.lyr.attributeAliases()
+        #print(self.catasto_alias)
+        for key_c, values_c in self.catasto_alias.items():
+            if values_c.casefold() == 'SEZIONE'.casefold() or key_c.casefold() == 'SEZIONE'.casefold():
+                self.sez_list.insert(0, key_c)
+                self.check_s += 1
+            if values_c.casefold() == 'FOGLIO'.casefold() or key_c.casefold() == 'FOGLIO'.casefold():
+                self.fog_list.insert(0, key_c)
+                self.check_f += 1
+            if values_c.casefold() == 'MAPPALE'.casefold() or key_c.casefold() == 'MAPPALE'.casefold():
+                self.map_list.insert(0, key_c)
+                self.check_m += 1
+
+        if self.check_s == 0:
+            self.dlg.textLog.append(self.tr('INFO: una colonna con nome o alias = sezione non è stata trovata\n'))
+            QCoreApplication.processEvents()
+        if self.check_f == 0:
+            self.dlg.textLog.append(self.tr('ERRORE: una colonna con nome o alias = foglio non è stata trovata\n'))
+            return
+        if self.check_m == 0:
+            self.dlg.textLog.append(self.tr('ERRORE: una colonna con nome o alias = mappale non è stata trovata\n'))
+            return
+
         #print(self.foglioIndex)
         if self.sezioneIndex == 0:
             #self.dlg.foglioComboBox.setEnabled(False)
             uniquevalues_s = []
             # #print(uniquevalues)
             uniqueprovider_s = self.lyr.dataProvider()
-            fields = uniqueprovider_s.fields()
-            id_s = fields.lookupField('FOGLIO')
+            #fields = uniqueprovider_s.fields()
+            id_s = self.lyr.fields().lookupField('FOGLIO')
             uniquevalues_s = list(uniqueprovider_s.uniqueValues( id_s ))
             # #print(len(uniquevalues))
             # #print(uniquevalues)
@@ -314,10 +353,7 @@ class CduCreator:
                 if uvs != NULL and uvs != '':
                     str_value_s = str(uvs)
                     self.show_values_s.append(str_value_s)
-                # #str_values = str(uv).split("\\")
-                # #if len(str_values) > 1: #per percorsi regione veneto mettere 4
-                    # #show_values.append(str_values[1] + ' - ' + str_values[2]) #per percorsi regione veneto mettere 5 e 6
-            #print (self.show_values)
+            #print (self.show_values_s)
             
             self.show_values_s.sort()
             self.dlg.foglioComboBox.clear()
@@ -328,18 +364,18 @@ class CduCreator:
             #self.dlg.foglioComboBox.setEnabled(True)
                 self.show_values_s = []
                 self.filter_s = self.dlg.sezioneComboBox.currentText()
-                print (self.filter_s)
+                #print (self.filter_s)
                 if self.filter_s == 'NULL':
                     print('is null')
-                    values_s = [feat_s['FOGLIO'.casefold()] for feat_s in self.lyr.getFeatures() if feat_s['SEZIONE'.casefold()] == None]
+                    values_s = [feat_s[self.fog_list[0].casefold()] for feat_s in self.lyr.getFeatures() if feat_s[self.sez_list[0].casefold()] == None]
                 else:
                     print('is not null')
-                    values_s = [feat_s['FOGLIO'.casefold()] for feat_s in self.lyr.getFeatures() if feat_s['SEZIONE'.casefold()] == self.filter_s]
+                    values_s = [feat_s[self.fog_list[0].casefold()] for feat_s in self.lyr.getFeatures() if feat_s[self.sez_list[0].casefold()] == self.filter_s]
                 list_val_s = set(values_s)
                 for uvs in list_val_s:
                     if uvs != '' and uvs != NULL:
                         self.show_values_s.append(uvs)
-                print(self.show_values_s)
+                #print(self.show_values_s)
                 self.show_values_s.sort()
                 self.dlg.foglioComboBox.clear()        
                 self.dlg.foglioComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
@@ -348,8 +384,8 @@ class CduCreator:
                 uniquevalues_s = []
                 # #print(uniquevalues)
                 uniqueprovider_s = self.lyr.dataProvider()
-                fields = uniqueprovider_s.fields()
-                id_s = fields.lookupField('FOGLIO')
+                #fields = uniqueprovider_s.fields()
+                id_s = self.lyr.fields().lookupField('FOGLIO')
                 uniquevalues_s = list(uniqueprovider_s.uniqueValues( id_s ))
                 self.show_values_s = []
                 for uvs in uniquevalues_s:
@@ -357,10 +393,6 @@ class CduCreator:
                     if uvs != NULL and uvs != '':
                         str_value_s = str(uvs)
                         self.show_values_s.append(str_value_s)
-                    # #str_values = str(uv).split("\\")
-                    # #if len(str_values) > 1: #per percorsi regione veneto mettere 4
-                        # #show_values.append(str_values[1] + ' - ' + str_values[2]) #per percorsi regione veneto mettere 5 e 6
-                #print (self.show_values)
                 
                 self.show_values_s.sort()
                 self.dlg.foglioComboBox.clear()
@@ -369,15 +401,15 @@ class CduCreator:
             
     def foglioBox(self, idxf):
         #print('foglio')
-        #print(self.lyr)
+
         self.foglioIndex = idxf
         if self.foglioIndex == 0:
             self.dlg.particellaComboBox.setEnabled(False)
             uniquevalues = []
             # #print(uniquevalues)
             uniqueprovider = self.lyr.dataProvider()
-            fields = uniqueprovider.fields()
-            id = fields.lookupField('FOGLIO')
+            #fields = uniqueprovider.fields()
+            id = self.lyr.fields().lookupField('FOGLIO')
             uniquevalues = list(uniqueprovider.uniqueValues( id ))
             # #print(len(uniquevalues))
             # #print(uniquevalues)
@@ -388,9 +420,6 @@ class CduCreator:
                 if uv != NULL and uv != '':
                     str_value = str(uv)
                     self.show_values.append(str_value)
-                # #str_values = str(uv).split("\\")
-                # #if len(str_values) > 1: #per percorsi regione veneto mettere 4
-                    # #show_values.append(str_values[1] + ' - ' + str_values[2]) #per percorsi regione veneto mettere 5 e 6
             #print (self.show_values)
             
             self.show_values.sort()
@@ -401,11 +430,11 @@ class CduCreator:
             self.dlg.particellaComboBox.setEnabled(True)
             self.show_values = []
             filter = self.dlg.foglioComboBox.currentText()
-            print (self.filter_s)
+            #print (self.filter_s)
             if self.filter_s == 'NULL':
-                values = [feat['MAPPALE'.casefold()] for feat in self.lyr.getFeatures() if feat['FOGLIO'.casefold()] == filter if feat['SEZIONE'.casefold()] == None]
+                values = [feat[self.map_list[0].casefold()] for feat in self.lyr.getFeatures() if feat[self.fog_list[0].casefold()] == filter if feat[self.sez_list[0].casefold()] == None]
             else:
-                values = [feat['MAPPALE'.casefold()] for feat in self.lyr.getFeatures() if feat['FOGLIO'.casefold()] == filter if feat['SEZIONE'.casefold()] == self.filter_s]
+                values = [feat[self.map_list[0].casefold()] for feat in self.lyr.getFeatures() if feat[self.fog_list[0].casefold()] == filter if feat[self.sez_list[0].casefold()] == self.filter_s]
             list_val = set(values)
             for uv in list_val:
                 if uv != '' and uv != NULL:
@@ -421,28 +450,28 @@ class CduCreator:
             self.show_values = []
             filter = self.dlg.foglioComboBox.currentText()
             #print (filter)
-            values = [feat['MAPPALE'.casefold()] for feat in self.lyr.getFeatures() if feat['FOGLIO'.casefold()] == filter]
+            values = [feat[self.map_list[0].casefold()] for feat in self.lyr.getFeatures() if feat[self.fog_list[0].casefold()] == filter]
             list_val = set(values)
             for uv in list_val:
                 if uv != '' and uv != NULL:
                     self.show_values.append(uv)
-            
+            #print(self.show_values)
             self.show_values.sort()
             self.dlg.particellaComboBox.clear()        
             self.dlg.particellaComboBox.addItem('') #--> aggiunge una riga vuota nell'elenco della combo
             self.dlg.particellaComboBox.addItems(sv for sv in self.show_values)
             
     def particellaBox(self, idxp):
-        #print('fai qualcosa')
         self.particellaIndex = idxp
         #print(self.particellaIndex)
-        #vlayer = self.dlg.catastoComboBox.currentLayer()
         
     def popComboSezione(self):
+        #print('pop sezione')
         uniqueprovider_sez = self.lyr.dataProvider()
-        fields_sez = uniqueprovider_sez.fields()
+        #fields_sez = uniqueprovider_sez.fields()
         unique_sezione = []
-        id_sezione = fields_sez.lookupField('SEZIONE')
+        id_sezione = self.lyr.fields().lookupField('SEZIONE')
+        #print(id_sezione)
         if id_sezione != -1:
             unique_sezione = list(uniqueprovider_sez.uniqueValues( id_sezione ))
 
@@ -451,7 +480,7 @@ class CduCreator:
                 #if uv_s != NULL:
                 str_value_s = str(uv_s)
                 self.sezione_values.append(str_value_s)
-                    
+            #print(self.sezione_values)
             self.sezione_values.sort()
             self.dlg.sezioneComboBox.clear()
             self.dlg.sezioneComboBox.addItem('')
@@ -461,9 +490,9 @@ class CduCreator:
         
     def popComboFoglio(self):
         uniqueprovider = self.lyr.dataProvider()
-        fields = uniqueprovider.fields()
+        #fields = uniqueprovider.fields()
         unique_foglio = []
-        id_foglio = fields.lookupField('FOGLIO') 
+        id_foglio = self.lyr.fields().lookupField('FOGLIO') 
         unique_foglio = list(uniqueprovider.uniqueValues( id_foglio ))
 
         self.foglio_values = []
@@ -478,7 +507,7 @@ class CduCreator:
         self.dlg.foglioComboBox.addItems(fv for fv in self.foglio_values)
             
     def unique(self, fi_ov): 
-        # intilize a null list 
+        # initialize a null list 
         unique_list = [] 
           
         # traverse for all elements 
@@ -493,7 +522,6 @@ class CduCreator:
         #print('gruppo')
         self.gruppoIndex = idxg
         #print(self.gruppoIndex)
-        #vlayer = self.dlg.catastoComboBox.currentLayer()
         
     def handleProtocollo(self, val):
         self.protocollo = val
@@ -516,9 +544,9 @@ class CduCreator:
     def handleData(self, val):
         self.data = val
         #self.dlg.dateEdit.setDate(QDate.currentDate())
-        print(self.data.toString(Qt.ISODate))
-        print(self.data.month())
-        print(self.data.day())
+        #print(self.data.toString(Qt.ISODate))
+        #print(self.data.month())
+        #print(self.data.day())
         
     def exportCduButton(self):
         self.cdu_out_folder = QFileDialog.getExistingDirectory()
@@ -533,6 +561,14 @@ class CduCreator:
         
     def handleFileName(self, val):
         self.cdu_file_name = val
+        
+    def handleOdtFile(self):
+        if self.dlg.odtCheckBox.isChecked() == True:
+            self.checkOdtBox = True
+            print('check')
+        else:
+            self.checkOdtBox = False
+            print('ucheck')
         
     def handleTitle(self, val):
         self.CduTitle = val
@@ -578,12 +614,7 @@ class CduCreator:
         self.dlg.textLog.clear()
         
     def openHelpButton(self):
-        # if QgsSettings().value('locale/userLocale') == 'it':
         webbrowser.open('https://manuale-cdu-creator.readthedocs.io/it/latest/')
-        # elif QgsSettings().value('locale/userLocale') == 'es':
-            # webbrowser.open('https://chm-from-lidar-manuale.readthedocs.io/es/latest/')
-        # else:
-            # webbrowser.open('https://chm-from-lidar-manuale.readthedocs.io/en/latest/')
         
     def prepRun(self):
     
@@ -596,7 +627,7 @@ class CduCreator:
         self.group_names = []
         for ch in child:
             if isinstance(ch, QgsLayerTreeGroup):
-                print (type(ch))
+                #print (type(ch))
                 self.group_names.append(ch.name())
                 
         self.dlg.gruppoComboBox.clear()
@@ -631,6 +662,7 @@ class CduCreator:
         self.dlg.DataCheckBox.stateChanged.disconnect(self.handleDataCheck)
         self.dlg.dateEdit.dateChanged.connect(self.handleData)
         self.dlg.printAreaBox.stateChanged.disconnect(self.handleAreaBox)
+        self.dlg.odtCheckBox.stateChanged.disconnect(self.handleOdtFile)
         self.dlg.pushButtonOk.clicked.disconnect(self.run)
         self.dlg.rejected.disconnect(self.closePlugin)
         
@@ -660,6 +692,11 @@ class CduCreator:
         self.richiedente = ''
         self.data = QDate.currentDate()
         self.checkDataBox = False
+        self.sez_list = []
+        self.fog_list = []
+        self.map_list = []
+        self.catasto_alias = {}
+        self.checkOdtBox = False
         
         
         if self.out_tempdir_s != '':
@@ -673,7 +710,7 @@ class CduCreator:
 
     def run(self):
         #print(show_values_s)
-        print(self.sezioneIndex)
+        #print(self.sezioneIndex)
         self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\n'))
         QCoreApplication.processEvents()
         
@@ -685,8 +722,13 @@ class CduCreator:
             self.dlg.textLog.append(self.tr('ERRORE: nessuna cartella di output è stata selezionata\n'))
             return
             
+        if os.path.isdir(self.cdu_path_folder) == False:
+            self.dlg.textLog.append(self.tr('ERRORE: la cartella {} non esiste\n'.format(self.cdu_path_folder)))
+            return
+            
         param_file = open(self.param_txt, "w")
         param_file.write(self.cdu_path_folder + '\n')
+        param_file.write(str(self.checkOdtBox) + '\n')
         param_file.write(self.CduTitle + '\n')
         param_file.write(self.CduComune + '\n')
         param_file.write(self.input_logo_path + '\n')
@@ -719,13 +761,13 @@ class CduCreator:
             if self.lyr.selectedFeatureCount() > 0 and self.sezioneIndex == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
                 selectedF = self.lyr.selectedFeatures()[0]
                 if self.lyr.fields().lookupField("SEZIONE") != -1:
-                    sel_sezione = selectedF["SEZIONE".casefold()]
+                    sel_sezione = selectedF[self.sez_list[0].casefold()]
                 else:
                     sel_sezione = 'NULL'
-                sel_foglio = selectedF["FOGLIO".casefold()]
-                print(sel_foglio)
-                sel_particella = selectedF["MAPPALE".casefold()]
-                print(sel_particella)
+                sel_foglio = selectedF[self.fog_list[0].casefold()]
+                #print(sel_foglio)
+                sel_particella = selectedF[self.map_list[0].casefold()]
+                #print(sel_particella)
                 if self.lyr.selectedFeatureCount() > 1:
                     self.dlg.textLog.append(self.tr('ATTENZIONE: sono state selezionate più particelle catastali, selezionare una sola particella\n'))
                     return
@@ -735,7 +777,7 @@ class CduCreator:
             elif self.foglioIndex != 0 and self.particellaIndex != 0:
                 #print('sel_sezione = {}'.format(sel_sezione))
                 sel_foglio = self.show_values_s[self.foglioIndex - 1]
-                #print('sel_foglio è {}'.format(sel_foglio))
+                print('sel_foglio è {}'.format(sel_foglio))
                 sel_particella = self.show_values[self.particellaIndex - 1]
                 #print(sel_particella)
                 if self.lyr.selectedFeatureCount() > 0:
@@ -745,22 +787,22 @@ class CduCreator:
                     sel_sezione = self.sezione_values[self.sezioneIndex - 1]
                     print('sel_sezione è {}'.format(sel_sezione))
                     if sel_sezione == 'NULL' or sel_sezione == '':
-                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
                         selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
                     else:
-                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), sel_sezione, 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
                         selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
                 else:
                     print('sono in sezione == 0')
-                    self.lyr.selectByExpression("{}='{}' AND {}='{}'".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
                     selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
                     selectedF = self.lyr.selectedFeatures()[0]
                     if self.lyr.fields().lookupField("SEZIONE") != -1:
-                        sel_sezione = selectedF["SEZIONE".casefold()]
+                        sel_sezione = selectedF[self.sez_list[0].casefold()]
                     else:
                         sel_sezione = 'NULL'
-                    sel_foglio = selectedF["FOGLIO".casefold()]
-                    sel_particella = selectedF["MAPPALE".casefold()]
+                    sel_foglio = selectedF[self.fog_list[0].casefold()]
+                    sel_particella = selectedF[self.map_list[0].casefold()]
                 if self.lyr.selectedFeatureCount() > 1:
                     self.dlg.textLog.append(self.tr('ATTENZIONE: sono state trovate più particelle catastali con foglio: {} e mappale: {}, selezionare una sola particella\n'.format(sel_foglio, sel_particella)))
                     return
@@ -868,67 +910,48 @@ class CduCreator:
                     nome_list = []
                     rif_list = []
                     art_list = []
+                    descr_check = 0
+                    nome_check = 0
+                    rif_check = 0
+                    art_check = 0
                     for keys, values in alias.items():
                         if values.casefold() == 'descrizione'.casefold() or keys.casefold() == 'descrizione'.casefold():
                             descr_list.insert(0, keys)
-                            #print(descr_name)
-                        else:
-                            descr_list.append('descrizione')
-                            #print('pippo')
+                            descr_check += 1
                         if values.casefold() == 'nome'.casefold() or keys.casefold() == 'nome'.casefold():
                             nome_list.insert(0, keys)
-                        else:
-                            nome_list.append('nome')
+                            nome_check += 1
                         if values.casefold() == 'riferimento legislativo'.casefold() or keys.casefold() == 'riferimento legislativo'.casefold():
                             rif_list.insert(0, keys)
-                        else:
-                            rif_list.append('riferimento legislativo')
+                            rif_check += 1
                         if values.casefold() == 'articolo'.casefold() or keys.casefold() == 'articolo'.casefold():
                             art_list.insert(0, keys)
-                        else:
-                            art_list.append('articolo')
-                    #print(descr_list)
-                    #print(nome_list)
-                    #print(rif_list)
-                    #print(art_list)
-                    #print(layers_dict)
-                    #print(layers_dict[key][2])
+                            art_check += 1
+
                     sel_lyr_int = QgsProject.instance().mapLayersByName(layers_dict[key][2])
 
-                    #print(sel_lyr_int[0])
-                    #print(sel_lyr_int[0].name())
-                    descr_index = sel_lyr_int[0].fields().indexFromName(descr_list[0])
-                    #print(descr_index)
-                    nome_index = sel_lyr_int[0].fields().indexFromName(nome_list[0])
-                    #print(nome_index)
-                    rifleg_index = sel_lyr_int[0].fields().indexFromName(rif_list[0])
-                    #print(rifleg_index)
-                    rifnto_index = sel_lyr_int[0].fields().indexFromName(art_list[0])
-                    #print(rifnto_index)
                     for fl in sel_lyr_int[0].getFeatures():
                         unique_id = layers_dict[key][2] + '_' + str(fl.id())
-                        #print(unique_id)
                         area = fl.geometry().area()
-                        if descr_index != -1:
-                            #print('Descrizione: {}'.format(fl["Descrizion"]))
+                        if descr_check == 1:
                             descr = '- Descrizione: {}'.format(fl[descr_list[0]])
                             if fl[descr_list[0]] == NULL:
                                 descr = '- Descrizione: -'
                         else:
                             descr = '- Descrizione: -'
-                        if nome_index != -1:
+                        if nome_check == 1:
                             nome = '- Nome: {}'.format(fl[nome_list[0]])
                             if fl[nome_list[0]] == NULL:
                                 nome = '- Nome: -'
                         else:
                             nome = '- Nome: -'
-                        if rifleg_index != -1:
+                        if rif_check == 1:
                             rif_leg = '- Riferimento legislativo: {}'.format(fl[rif_list[0]])
                             if fl[rif_list[0]] == NULL:
                                 rif_leg = '- Riferimento legislativo: -'
                         else:
                             rif_leg = '- Riferimento legislativo: -'
-                        if rifnto_index != -1:
+                        if art_check == 1:
                             rif_nto = '- Articolo: {}'.format(fl[art_list[0]])
                             if fl[art_list[0]] == NULL:
                                 rif_nto = '- Articolo: -'
@@ -942,16 +965,16 @@ class CduCreator:
                         print_dict[unique_id] = (sbgr_lyr, nome, descr, rif_leg, rif_nto, area_tot)
                 #print(print_dict)
                 
-                    if nome_index == -1:
+                    if nome_check == 0:
                         self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Nome" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
                         QCoreApplication.processEvents()
-                    if descr_index == -1:
+                    if descr_check == 0:
                         self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Descrizione" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
                         QCoreApplication.processEvents()
-                    if rifleg_index == -1:
+                    if rif_check == 0:
                         self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Riferimento legislativo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
                         QCoreApplication.processEvents()
-                    if rifnto_index == -1:
+                    if art_check == 0:
                         self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Articolo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
                         QCoreApplication.processEvents()
 
@@ -1006,7 +1029,12 @@ class CduCreator:
                 stringa = '<!DOCTYPE html><html><head><style>p {font-size: 13px;}</style></head><body>'
                 if self.input_logo_path != '':
                     if os.path.isfile(self.input_logo_path):
-                        stringa += '<p style="text-align:center; vertical-align: middle;"><img height="60" src="' + self.input_logo_path + '"></p>'
+                        im = Image.open(self.input_logo_path)
+                        #print(im.size)   # return value is a tuple, ex.: (1200, 800)
+                        w = im.size[0]
+                        h = im.size[1]
+                        fw = 60 * w/h
+                        stringa += '<p style="text-align:center; vertical-align: middle;"><img height="60" width="' + str(round(fw)) + '" src="' + self.input_logo_path + '"></p>'
                     else:
                         self.dlg.textLog.append(self.tr('ATTENZIONE: il file {} non è stato trovato, il Logo non verrà stampato.\n'.format(self.input_logo_path)))
                         QCoreApplication.processEvents()
@@ -1063,6 +1091,24 @@ class CduCreator:
                 doc.print(printer)
                 self.dlg.textLog.append(self.tr('Il file PDF {} è stato salvato nella cartella {}.\n'.format(cdu_pdf_name, self.cdu_path_folder)))
                 QCoreApplication.processEvents()
+                if self.checkOdtBox == True:
+                    if self.cdu_file_name == '':
+                        if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
+                            print('sezione no')
+                            cdu_odt_name = 'cdu_F{}_M{}_{}.odt'.format(sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                        else:
+                            print('sezione si')
+                            cdu_odt_name = 'cdu_S_{}_F{}_M{}_{}.odt'.format(sel_sezione, sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                    else:
+                        cdu_odt_name = '{}.odt'.format(self.cdu_file_name)
+                    #print('il nome file è {}'.format(cdu_pdf_name))
+                    cdu_odt_path = os.path.join(self.cdu_path_folder, cdu_odt_name)
+                    writer = QTextDocumentWriter()
+                    #print(writer.supportedDocumentFormats())
+                    writer.setFormat(QByteArray(b'ODF'))
+                    writer.setFileName(cdu_odt_path)
+                    writer.write(doc)
+                    
             else:
                 if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
                     self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer. Il CDU non verrà creato.\n'.format(sel_foglio, sel_particella)))
@@ -1079,10 +1125,6 @@ class CduCreator:
                     selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
             else:
                 self.lyr.selectByExpression("{}='{}' AND {}='{}'".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
-            # if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-':
-                # self.lyr.selectByExpression("{}='{}' AND {}='{}'".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
-            # else:
-                # self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), sel_sezione, 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
             
             #rimuove il gruppo temporaneo
             rm_group = self.root.findGroup('temp')

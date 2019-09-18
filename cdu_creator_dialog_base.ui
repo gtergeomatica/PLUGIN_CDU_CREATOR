@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>415</width>
-    <height>713</height>
+    <height>733</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -270,6 +270,13 @@
              <widget class="QLineEdit" name="nameLineEdit"/>
             </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="odtCheckBox">
+            <property name="text">
+             <string>Stampa anche file di testo modificabile (formato .odt)</string>
+            </property>
+           </widget>
           </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
