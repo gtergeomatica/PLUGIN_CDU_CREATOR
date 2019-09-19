@@ -277,8 +277,11 @@ class CduCreator:
                 self.dlg.clearButton.clicked.connect(self.clearButton)
                 self.dlg.helpButton.clicked.connect(self.openHelpButton)
                 self.dlg.foglioComboBox.currentIndexChanged.connect(self.foglioBox)
+                self.dlg.foglioComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
                 self.dlg.sezioneComboBox.currentIndexChanged.connect(self.sezioneBox)
+                self.dlg.sezioneComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
                 self.dlg.particellaComboBox.currentIndexChanged.connect(self.particellaBox)
+                self.dlg.particellaComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
                 self.dlg.gruppoComboBox.currentIndexChanged.connect(self.gruppoBox)
                 self.dlg.logoButton.clicked.connect(self.importLogo)
                 self.dlg.urlLogo.textChanged.connect(self.handleLogo)
@@ -333,7 +336,8 @@ class CduCreator:
                 self.check_m += 1
 
         if self.check_s == 0:
-            self.dlg.textLog.append(self.tr('INFO: una colonna con nome o alias = sezione non è stata trovata\n'))
+            self.dlg.sezioneComboBox.setEnabled(False)
+            self.dlg.textLog.append(self.tr('INFO: una colonna con nome o alias = sezione non è stata trovata, il menù a tendina Sezione è stato disabilitato.\n'))
             QCoreApplication.processEvents()
         if self.check_f == 0:
             self.dlg.textLog.append(self.tr('ERRORE: una colonna con nome o alias = foglio non è stata trovata\n'))
@@ -964,7 +968,7 @@ class CduCreator:
                                 rif_nto = '- Articolo: -'
                         else:
                             rif_nto = '- Articolo: -'
-                        area_tot = '- Area totale (mq): {:.3f}'.format(area)
+                        area_tot = '- Area totale (m<sup>2</sup>): {}'.format(round(area))
                         if layers_dict[key][0]:
                             sbgr_lyr = '{} - {}'.format(layers_dict[key][0], layers_dict[key][1])
                         else:
