@@ -10,7 +10,7 @@
 name=CDU Creator
 qgisMinimumVersion=3.0
 description=This plugin creates the .pdf file of CDU (Certificato di Destinazione Urbanistica).
-version=0.1
+version=0.2
 author=Roberta Fagandini (Gter srl) - Roberto Marzocchi (Gter srl)
 email=assistenzagis@gter.it
 
@@ -20,12 +20,14 @@ about=
     The output is a .pdf file containing all the information, related to the selected parcel, extracted through the intersection process. 
     The .pdf file can be customized adding a logo, a title and a text paragraph (e.g. introduction, legislative references, etc.). 
     The Plugin CDU Creator has been written in Italian since it refers to an italian regulation regarding urban planning.
+    The user manual is available at the following link https://manuale-cdu-creator.readthedocs.io/it/latest/index.html
     
-    Questo plugin compila il CDU (Certificato di Destinazione Urbanistica) utilizzando il layer vettoriale del catasto terreni e i layers vettoriali dello strumento urbanistico.
+    Questo plugin compila il CDU (Certificato di Destinazione Urbanistica) utilizzando il layer vettoriale del catasto terreni a i layers vettoriali dello strumento urbanistico.
     La particella selezionata è intersecata con i layers dello strumento urbanistico da cui vengono recuperate le informazioni da stampare nel file di output finale.
     L'output è un file .pdf contenete tutte le informazioni, relative alla particella selezionata, estratte tramite il processo di intersezione.
     Il file .pdf può essere personalizzato aggiungendo un logo, un titolo e un paragrafo di testo contente eventuali diciture, riferimenti normativi, ecc.
     Il Plugin CDU Creator è stato scritto in italiano in quanto fa riferimento a una normativa italiana riguardante l'urbanistica.
+    Il manuale è disponibile a questo link https://manuale-cdu-creator.readthedocs.io/it/latest/index.html
 
 tracker=https://github.com/gtergeomatica/cdu_creator/issues
 repository=https://github.com/gtergeomatica/cdu_creator
@@ -35,6 +37,8 @@ repository=https://github.com/gtergeomatica/cdu_creator
 
 # Uncomment the following line and add your changelog:
 changelog=
+    0.2
+        * Fixed bug about the printing of sub-groups name
     0.1
         * First public release 
 

@@ -788,7 +788,7 @@ class CduCreator:
             elif self.foglioIndex != 0 and self.particellaIndex != 0:
                 #print('sel_sezione = {}'.format(sel_sezione))
                 sel_foglio = self.show_values_s[self.foglioIndex - 1]
-                print('sel_foglio è {}'.format(sel_foglio))
+                #print('sel_foglio è {}'.format(sel_foglio))
                 sel_particella = self.show_values[self.particellaIndex - 1]
                 #print(sel_particella)
                 if self.lyr.selectedFeatureCount() > 0:
@@ -796,7 +796,7 @@ class CduCreator:
                     QCoreApplication.processEvents()
                 if self.sezioneIndex != 0:
                     sel_sezione = self.sezione_values[self.sezioneIndex - 1]
-                    print('sel_sezione è {}'.format(sel_sezione))
+                    #print('sel_sezione è {}'.format(sel_sezione))
                     if sel_sezione == 'NULL' or sel_sezione == '':
                         self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
                         selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
@@ -849,6 +849,7 @@ class CduCreator:
             
             #legge gruppi, sottogruppi e layers nel layer tree e aggiunge a un dizionario solo quelli che intersecano l'area di interesse
             lyrs = []
+            lyrs_tmp = []
             layers = []
             layers_name = []
             subgr_name = []
@@ -859,24 +860,30 @@ class CduCreator:
                         for gr in child.children():
                             if isinstance(gr, QgsLayerTreeGroup):
                             #print(gr.name())
-                                subgr_name.append(gr.name())
-                                lyrs = gr.findLayers()
+                                #subgr_name.append(gr.name())
+                                lyrs_tmp = gr.findLayers()
+                                for lt in lyrs_tmp:
+                                    lyrs.append(lt)
+                                    subgr_name.append(gr.name())
                             elif isinstance(gr, QgsLayerTreeLayer):
                                 subgr_name.append('')
                                 lyrs.append(gr)
-                            for l in lyrs:
-                                #print(lyr.name())
-                                #print(lyr.layerId())
-                                processing.run("native:selectbylocation", {'INPUT': l.layer(),
-                                        'PREDICATE': [0],
-                                        'INTERSECT': selected_feat,
-                                        'METHOD': 0})
-                                if l.layer().selectedFeatureCount() > 0:
-                                    layers.append(l.layer())
-                                    layers_name.append(l.name())
-                                    layers_dict[layers[-1]] = (subgr_name[-1], layers_name[-1])
-                                    l.layer().removeSelection()
-
+                        g = 0
+                        for l in lyrs:
+                            #print(lyr.name())
+                            #print(lyr.layerId())
+                            processing.run("native:selectbylocation", {'INPUT': l.layer(),
+                                    'PREDICATE': [0],
+                                    'INTERSECT': selected_feat,
+                                    'METHOD': 0})
+                            if l.layer().selectedFeatureCount() > 0:
+                                layers.append(l.layer())
+                                layers_name.append(l.name())
+                                layers_dict[layers[-1]] = (subgr_name[g], layers_name[-1])
+                                l.layer().removeSelection()
+                            g += 1
+            #print(subgr_name)
+            #print(layers_dict)
             if len(layers) > 0:
                 shp_count = 0
                 pos = 0
@@ -1061,7 +1068,7 @@ class CduCreator:
                     stringa += 'Lì, ' + self.data.toString( Qt.DefaultLocaleShortDate) + '</p>'
                 stringa += '<h3 style="text-align:center">Il Responsabile del Servizio</h3>'
                 if self.richiedente == '':
-                    stringa += '<p>Vista la richiesta del _________________________________________________________________________ <br><br>'
+                    stringa += '<p>Vista la richiesta del _______________________________________________________________________ <br><br>'
                 else:
                     stringa += '<p>Vista la richiesta del <i>' + self.richiedente + ' </i>'
                 if self.checkDataBox == False:
