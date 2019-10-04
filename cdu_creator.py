@@ -999,8 +999,14 @@ class CduCreator:
                                 rif_nto = '- Articolo: -'
                         else:
                             rif_nto = '- Articolo: -'
-                        area_tot = '- Area totale (m<sup>2</sup>): {}'.format(round(area))
-                        area_tot_perc = '- Area totale (%): {}'.format(round(area_perc))
+                        if area < 0.5:
+                            area_tot = '- Area intersecata (m<sup>2</sup>): {}'.format(area)
+                        else:
+                            area_tot = '- Area intersecata (m<sup>2</sup>): {}'.format(round(area))
+                        if area_perc < 0.5:
+                            area_tot_perc = '- Area intersecata (%): {}'.format(round(area_perc, 3))
+                        else:
+                            area_tot_perc = '- Area intersecata (%): {}'.format(round(area_perc))
                         if layers_dict[key][0]:
                             sbgr_lyr = '{} - {}'.format(layers_dict[key][0], layers_dict[key][1])
                         else:
