@@ -100,6 +100,7 @@ class CduCreator:
         self.CduComune = ''
         self.input_logo_path = ''
         self.checkAreaBox = False
+        self.checkAreaPercBox = False
         self.root = ''
         self.input_txt_path = ''
         self.cdu_file_name = ''
@@ -246,6 +247,7 @@ class CduCreator:
                 self.input_logo_path = param[4].strip()
                 self.input_txt_path = param[5].strip()
                 self.checkAreaBox = param[6].strip()
+                self.checkAreaPercBox = param[7].strip()
                 self.dlg.OutFolder.setText(self.cdu_path_folder)
                 if self.checkOdtBox == 'True':
                     self.checkOdtBox = True
@@ -263,6 +265,12 @@ class CduCreator:
                 else:
                     self.checkAreaBox = False
                     self.dlg.printAreaBox.setChecked(False)
+                if self.checkAreaPercBox == 'True':
+                    self.checkAreaPercBox = True
+                    self.dlg.printAreaPercBox.setChecked(True)
+                else:
+                    self.checkAreaPercBox = False
+                    self.dlg.printAreaPercBox.setChecked(False)
                 param_file.close()
             else:
                 param_file = open(self.param_txt, "w+")
@@ -294,9 +302,11 @@ class CduCreator:
                 self.dlg.richiedenteEdit.textChanged.connect(self.handleRichiedente)
                 self.dlg.DataCheckBox.stateChanged.connect(self.handleDataCheck)
                 self.dlg.dateEdit.setDate(QDate.currentDate())
+                #self.dlg.printAreaBox.setText("m<sup>2</sup>")
                 #self.dlg.dateEdit.setDate(QDate(2019, 9, 13))
                 self.dlg.dateEdit.dateChanged.connect(self.handleData)
                 self.dlg.printAreaBox.stateChanged.connect(self.handleAreaBox)
+                self.dlg.printAreaPercBox.stateChanged.connect(self.handleAreaPercBox)
                 self.dlg.odtCheckBox.stateChanged.connect(self.handleOdtFile)
                 self.dlg.pushButtonOk.clicked.connect(self.run)
                 self.dlg.rejected.connect(self.closePlugin)
@@ -620,6 +630,15 @@ class CduCreator:
         else:
             self.checkAreaBox = False
             print('ucheck')
+            
+    def handleAreaPercBox(self):
+        #self.checkNegBox = state
+        if self.dlg.printAreaPercBox.isChecked() == True:
+            self.checkAreaPercBox = True
+            print('check')
+        else:
+            self.checkAreaPercBox = False
+            print('ucheck')
         
     def clearButton(self):
         self.dlg.textLog.clear()
@@ -673,6 +692,7 @@ class CduCreator:
         self.dlg.DataCheckBox.stateChanged.disconnect(self.handleDataCheck)
         self.dlg.dateEdit.dateChanged.connect(self.handleData)
         self.dlg.printAreaBox.stateChanged.disconnect(self.handleAreaBox)
+        self.dlg.printAreaPercBox.stateChanged.disconnect(self.handleAreaPercBox)
         self.dlg.odtCheckBox.stateChanged.disconnect(self.handleOdtFile)
         self.dlg.pushButtonOk.clicked.disconnect(self.run)
         self.dlg.rejected.disconnect(self.closePlugin)
@@ -696,6 +716,7 @@ class CduCreator:
         self.CduComune = ''
         self.input_logo_path = ''
         self.checkAreaBox = False
+        self.checkAreaPercBox = False
         self.root = ''
         self.input_txt_path = ''
         self.cdu_file_name = ''
@@ -745,6 +766,7 @@ class CduCreator:
         param_file.write(self.input_logo_path + '\n')
         param_file.write(self.input_txt_path + '\n')
         param_file.write(str(self.checkAreaBox) + '\n')
+        param_file.write(str(self.checkAreaPercBox) + '\n')
         param_file.close()
 
         result = True
@@ -821,7 +843,8 @@ class CduCreator:
             elif self.lyr.selectedFeatureCount() == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
                 self.dlg.textLog.append(self.tr('ATTENZIONE: nessuna particella è stata selezionata, selezionare un mappale\n'))
                 return
-                    
+            
+            area_sel = self.lyr.selectedFeatures()[0].geometry().area()
             box = self.lyr.boundingBoxOfSelected()
             map = iface.mapCanvas()
             map.setExtent(box)
@@ -951,6 +974,7 @@ class CduCreator:
                     for fl in sel_lyr_int[0].getFeatures():
                         unique_id = layers_dict[key][2] + '_' + str(fl.id())
                         area = fl.geometry().area()
+                        area_perc = area * 100 / area_sel
                         if descr_check == 1:
                             descr = '- Descrizione: {}'.format(fl[descr_list[0]])
                             if fl[descr_list[0]] == NULL:
@@ -976,11 +1000,12 @@ class CduCreator:
                         else:
                             rif_nto = '- Articolo: -'
                         area_tot = '- Area totale (m<sup>2</sup>): {}'.format(round(area))
+                        area_tot_perc = '- Area totale (%): {}'.format(round(area_perc))
                         if layers_dict[key][0]:
                             sbgr_lyr = '{} - {}'.format(layers_dict[key][0], layers_dict[key][1])
                         else:
                             sbgr_lyr = '{}'.format(layers_dict[key][1])
-                        print_dict[unique_id] = (sbgr_lyr, nome, descr, rif_leg, rif_nto, area_tot)
+                        print_dict[unique_id] = (sbgr_lyr, nome, descr, rif_leg, rif_nto, area_tot, area_tot_perc)
                 #print(print_dict)
                 
                     if nome_check == 0:
@@ -1095,8 +1120,12 @@ class CduCreator:
                 else:
                     stringa += '<p> Il terreno oggetto della richiesta e distinto in Catasto alla sezione <b>' + sel_sezione + '</b> e al foglio <b>' + sel_foglio + '</b> con il mappale <b>' + sel_particella + '</b> interseca le seguenti mappe del <b>' + selectedGroup + '</b>:<br></p>'
                 for key, value in print_dict.items():
-                    if self.checkAreaBox == True:
+                    if self.checkAreaBox == True and self.checkAreaPercBox == True:
+                        stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br>' + value[5] + '<br>' + value[6] +'<br><br></p>'
+                    elif self.checkAreaBox == True and self.checkAreaPercBox == False:
                         stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br>' + value[5] + '<br><br></p>'
+                    elif self.checkAreaBox == False and self.checkAreaPercBox == True:
+                        stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br>' + value[6] + '<br><br></p>'
                     else:
                         stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br><br></p>'
                 #####capire perchè non funziona il tag style dentro l'img..se provo a creare un file htm con quel tag e lo visualizzo su web funziona vedi file test.html in immagini
