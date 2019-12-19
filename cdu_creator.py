@@ -794,9 +794,11 @@ class CduCreator:
             if self.lyr.selectedFeatureCount() > 0 and self.sezioneIndex == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
                 selectedF = self.lyr.selectedFeatures()[0]
                 if self.lyr.fields().lookupField("SEZIONE") != -1:
+                    #print('la sezione esiste')
                     sel_sezione = selectedF[self.sez_list[0].casefold()]
                 else:
                     sel_sezione = 'NULL'
+
                 sel_foglio = selectedF[self.fog_list[0].casefold()]
                 #print(sel_foglio)
                 sel_particella = selectedF[self.map_list[0].casefold()]
@@ -806,7 +808,7 @@ class CduCreator:
                     return
                 else:
                     selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
-                    print(selected_feat)
+                    #print(selected_feat)
             elif self.foglioIndex != 0 and self.particellaIndex != 0:
                 #print('sel_sezione = {}'.format(sel_sezione))
                 sel_foglio = self.show_values_s[self.foglioIndex - 1]
@@ -1170,16 +1172,20 @@ class CduCreator:
                 else:
                     self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer. Il CDU non verrà creato.\n'.format(sel_sezione, sel_foglio, sel_particella)))
                     QCoreApplication.processEvents()
-                    
+      
             if self.sezioneIndex != 0:
                 if sel_sezione == 'NULL' or sel_sezione == '':
-                    self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
+                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
                 else:
-                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format('SEZIONE'.casefold(), sel_sezione, 'FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
-                    selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))                
             else:
-                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format('FOGLIO'.casefold(), sel_foglio, 'MAPPALE'.casefold(), sel_particella))
-            
+                if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == NULL:
+                    #print('sez null')
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
+                else:
+                    #print('sez not null')
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
+
             #rimuove il gruppo temporaneo
             rm_group = self.root.findGroup('temp')
             if rm_group is not None:
@@ -1187,6 +1193,6 @@ class CduCreator:
                     QgsProject.instance().removeMapLayer(child.layerId())
                 self.root.removeChildNode(rm_group)
             map.refresh()
-            
+
             self.dlg.textLog.append(self.tr('PROCESSO TERMINATO...\n'))
             QCoreApplication.processEvents()
