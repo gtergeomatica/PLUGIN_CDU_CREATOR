@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>415</width>
-    <height>733</height>
+    <width>476</width>
+    <height>744</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>CDU Creator</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout_18">
+  <layout class="QHBoxLayout" name="horizontalLayout_19">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_3">
      <item>
@@ -23,61 +23,82 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout">
-          <item>
-           <widget class="QLabel" name="label_9">
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QLabel" name="label_9">
+              <property name="text">
+               <string>Sezione</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="sezioneComboBox">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_2">
+              <property name="text">
+               <string>Foglio</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="foglioComboBox">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Mappale</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="particellaComboBox">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="addButton">
             <property name="text">
-             <string>Sezione</string>
+             <string>Aggiungi</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QComboBox" name="sezioneComboBox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
+          <item row="1" column="0">
+           <widget class="QTextBrowser" name="textParticelle"/>
           </item>
-          <item>
-           <widget class="QLabel" name="label_2">
+          <item row="1" column="1">
+           <widget class="QPushButton" name="clearSelButton">
             <property name="text">
-             <string>Foglio</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="foglioComboBox">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Mappale</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="particellaComboBox">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
+             <string>Pulisci Selezione</string>
             </property>
            </widget>
           </item>
@@ -227,7 +248,7 @@
        <property name="title">
         <string>Output</string>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_17">
+       <layout class="QHBoxLayout" name="horizontalLayout_18">
         <item>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
@@ -272,11 +293,35 @@
            </layout>
           </item>
           <item>
-           <widget class="QCheckBox" name="odtCheckBox">
-            <property name="text">
-             <string>Stampa anche file di testo modificabile (formato .odt)</string>
-            </property>
-           </widget>
+           <layout class="QHBoxLayout" name="horizontalLayout_17">
+            <item>
+             <widget class="QCheckBox" name="odtCheckBox">
+              <property name="text">
+               <string>Stampa anche file  modificabile (formato .odt)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_3">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>28</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="mapCheckBox">
+              <property name="text">
+               <string>Stampa la mappa</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_5">

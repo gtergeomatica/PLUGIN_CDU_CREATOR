@@ -22,7 +22,7 @@
  ***************************************************************************/
 """
 from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QDir, QSize, QDate, Qt, QByteArray
-from PyQt5.QtGui import QIcon, QPainter, QImage, QTextDocument, QTextDocumentWriter
+from PyQt5.QtGui import QIcon, QPainter, QImage, QTextDocument, QTextDocumentWriter, QPen, QColor
 from PyQt5.QtWidgets import QAction, QFileDialog, QMessageBox, QProgressBar, QDialog, QCheckBox
 from PyQt5.QtPrintSupport import QPrinter
 from PyQt5.QtXml import QDomDocument
@@ -113,7 +113,7 @@ class CduCreator:
         self.map_list = []
         self.catasto_alias = {}
         self.checkOdtBox = False
-        
+        self.checkMapBox = False        
         
 
     # noinspection PyMethodMayBeStatic
@@ -242,12 +242,13 @@ class CduCreator:
                 param = param_file.readlines()
                 self.cdu_path_folder = param[0].strip()
                 self.checkOdtBox = param[1].strip()
-                self.CduTitle = param[2].strip()
-                self.CduComune = param[3].strip()
-                self.input_logo_path = param[4].strip()
-                self.input_txt_path = param[5].strip()
-                self.checkAreaBox = param[6].strip()
-                self.checkAreaPercBox = param[7].strip()
+                self.checkMapBox = param[2].strip()
+                self.CduTitle = param[3].strip()
+                self.CduComune = param[4].strip()
+                self.input_logo_path = param[5].strip()
+                self.input_txt_path = param[6].strip()
+                self.checkAreaBox = param[7].strip()
+                self.checkAreaPercBox = param[8].strip()
                 self.dlg.OutFolder.setText(self.cdu_path_folder)
                 if self.checkOdtBox == 'True':
                     self.checkOdtBox = True
@@ -255,6 +256,12 @@ class CduCreator:
                 else:
                     self.checkOdtBox = False
                     self.dlg.odtCheckBox.setChecked(False)
+                if self.checkMapBox == 'True':
+                    self.checkMapBox = True
+                    self.dlg.mapCheckBox.setChecked(True)
+                else:
+                    self.checkMapBox = False
+                    self.dlg.mapCheckBox.setChecked(False)
                 self.dlg.titolo.setText(self.CduTitle)
                 self.dlg.nomeComune.setText(self.CduComune)
                 self.dlg.urlLogo.setText(self.input_logo_path)
@@ -276,13 +283,13 @@ class CduCreator:
                 param_file = open(self.param_txt, "w+")
                 param_file.close()
 
-            #print(self.lyr)
             if QgsProject.instance().mapLayersByName('terreni_catastali'):
                 self.lyr = QgsProject.instance().mapLayersByName('terreni_catastali')[0]
                         
                 self.dlg.OutFolderButton.clicked.connect(self.exportCduButton)
                 self.dlg.OutFolder.textChanged.connect(self.handleOutFolder)
                 self.dlg.clearButton.clicked.connect(self.clearButton)
+                self.dlg.clearSelButton.clicked.connect(self.clearSelButton)
                 self.dlg.helpButton.clicked.connect(self.openHelpButton)
                 self.dlg.foglioComboBox.currentIndexChanged.connect(self.foglioBox)
                 self.dlg.foglioComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -308,10 +315,29 @@ class CduCreator:
                 self.dlg.printAreaBox.stateChanged.connect(self.handleAreaBox)
                 self.dlg.printAreaPercBox.stateChanged.connect(self.handleAreaPercBox)
                 self.dlg.odtCheckBox.stateChanged.connect(self.handleOdtFile)
+                self.dlg.mapCheckBox.stateChanged.connect(self.handleMapFile)
+                self.dlg.addButton.clicked.connect(self.addMapButton)
                 self.dlg.pushButtonOk.clicked.connect(self.run)
                 self.dlg.rejected.connect(self.closePlugin)
                 
                 self.prepRun()
+                
+                if self.lyr.selectedFeatureCount() > 0:
+                    for sf in self.lyr.selectedFeatures():
+                        sel_foglio = sf[self.fog_list[0].casefold()]
+                        sel_particella = sf[self.map_list[0].casefold()]
+                        if self.lyr.fields().lookupField("SEZIONE") != -1:
+                            sel_sezione = sf[self.sez_list[0].casefold()]
+                            if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
+                                self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(sel_foglio, sel_particella)))
+                            else:
+                                self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(sel_sezione, sel_foglio, sel_particella)))
+                        else:
+                            self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(sel_foglio, sel_particella)))
+                        
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: è già presente una selezione nel layer terreni_catastali.\nUlteriori selezioni utilizzando i menù a tendina saranno aggiunte a quella esistente.'))
+                    QCoreApplication.processEvents()
+                    
                 self.dlg.show()
             else:
                 self.iface.messageBar().pushMessage("ATTENZIONE", "Il layer terreni_catastali non è caricato nel progetto.", level=Qgis.Critical, duration=4)
@@ -539,6 +565,36 @@ class CduCreator:
         # print list 
         return unique_list
         
+    def addMapButton(self):
+        if self.foglioIndex != 0 and self.particellaIndex != 0:
+            #print('sel_sezione = {}'.format(sel_sezione))
+            sel_foglio = self.show_values_s[self.foglioIndex - 1]
+            #print('sel_foglio è {}'.format(sel_foglio))
+            sel_particella = self.show_values[self.particellaIndex - 1]
+            #print(sel_particella)
+            if self.sezioneIndex != 0:
+                sel_sezione = self.sezione_values[self.sezioneIndex - 1]
+                #print('sel_sezione è {}'.format(sel_sezione))
+                if sel_sezione == 'NULL' or sel_sezione == '':
+                    self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 1)
+                else:
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 1)
+                self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(sel_sezione, sel_foglio, sel_particella)))
+            else:
+                #print('sono in sezione == 0')
+                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 1)
+                selectedF = self.lyr.selectedFeatures()[0]
+                if self.lyr.fields().lookupField("SEZIONE") != -1:
+                    sel_sezione = selectedF[self.sez_list[0].casefold()]
+                else:
+                    sel_sezione = 'NULL'
+                sel_foglio = selectedF[self.fog_list[0].casefold()]
+                sel_particella = selectedF[self.map_list[0].casefold()]
+                self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(sel_foglio, sel_particella)))
+        else:
+            self.dlg.textLog.append(self.tr('ATTENZIONE: è necessario selezionare almeno un valore per il foglio e uno per il mappale.'))
+            return
+        
     def gruppoBox(self, idxg):
         #print('gruppo')
         self.gruppoIndex = idxg
@@ -555,19 +611,13 @@ class CduCreator:
             self.checkDataBox = True
             self.dlg.label_11.setEnabled(True)
             self.dlg.dateEdit.setEnabled(True)
-            print('check')
         else:
             self.checkDataBox = False
             self.dlg.label_11.setEnabled(False)
             self.dlg.dateEdit.setEnabled(False)
-            print('ucheck')
         
     def handleData(self, val):
         self.data = val
-        #self.dlg.dateEdit.setDate(QDate.currentDate())
-        #print(self.data.toString(Qt.ISODate))
-        #print(self.data.month())
-        #print(self.data.day())
         
     def exportCduButton(self):
         self.cdu_out_folder = QFileDialog.getExistingDirectory()
@@ -578,7 +628,7 @@ class CduCreator:
         
     def handleOutFolder(self, val):
         self.cdu_path_folder = val
-        print(self.cdu_path_folder)
+        #print(self.cdu_path_folder)
         
     def handleFileName(self, val):
         self.cdu_file_name = val
@@ -586,10 +636,14 @@ class CduCreator:
     def handleOdtFile(self):
         if self.dlg.odtCheckBox.isChecked() == True:
             self.checkOdtBox = True
-            print('check')
         else:
             self.checkOdtBox = False
-            print('ucheck')
+            
+    def handleMapFile(self):
+        if self.dlg.mapCheckBox.isChecked() == True:
+            self.checkMapBox = True
+        else:
+            self.checkMapBox = False
         
     def handleTitle(self, val):
         self.CduTitle = val
@@ -613,9 +667,7 @@ class CduCreator:
         
     def importTxt(self):
         self.input_txt, _filter = QFileDialog.getOpenFileName(None, "Open ", '.', "(*.txt)")
-        print (self.input_txt)
         self.input_txt_path = QDir.toNativeSeparators(self.input_txt)
-        print (self.input_txt_path)
         input_txt_txt = self.dlg.urlTxt.setText(self.input_txt_path)
         
     def handleTxt(self, val):
@@ -623,25 +675,23 @@ class CduCreator:
         print(self.input_txt_path)
 
     def handleAreaBox(self):
-        #self.checkNegBox = state
         if self.dlg.printAreaBox.isChecked() == True:
             self.checkAreaBox = True
-            print('check')
         else:
             self.checkAreaBox = False
-            print('ucheck')
             
     def handleAreaPercBox(self):
-        #self.checkNegBox = state
         if self.dlg.printAreaPercBox.isChecked() == True:
             self.checkAreaPercBox = True
-            print('check')
         else:
             self.checkAreaPercBox = False
-            print('ucheck')
         
     def clearButton(self):
         self.dlg.textLog.clear()
+        
+    def clearSelButton(self):
+        self.lyr.removeSelection()
+        self.dlg.textParticelle.clear()
         
     def openHelpButton(self):
         webbrowser.open('https://manuale-cdu-creator.readthedocs.io/it/latest/')
@@ -675,6 +725,7 @@ class CduCreator:
         self.dlg.OutFolderButton.clicked.disconnect(self.exportCduButton)
         self.dlg.OutFolder.textChanged.disconnect(self.handleOutFolder)
         self.dlg.clearButton.clicked.disconnect(self.clearButton)
+        self.dlg.clearSelButton.clicked.disconnect(self.clearSelButton)
         self.dlg.helpButton.clicked.disconnect(self.openHelpButton)
         self.dlg.foglioComboBox.currentIndexChanged.disconnect(self.foglioBox)
         self.dlg.sezioneComboBox.currentIndexChanged.disconnect(self.sezioneBox)
@@ -694,6 +745,8 @@ class CduCreator:
         self.dlg.printAreaBox.stateChanged.disconnect(self.handleAreaBox)
         self.dlg.printAreaPercBox.stateChanged.disconnect(self.handleAreaPercBox)
         self.dlg.odtCheckBox.stateChanged.disconnect(self.handleOdtFile)
+        self.dlg.mapCheckBox.stateChanged.disconnect(self.handleMapFile)
+        self.dlg.addButton.clicked.disconnect(self.addMapButton)
         self.dlg.pushButtonOk.clicked.disconnect(self.run)
         self.dlg.rejected.disconnect(self.closePlugin)
         
@@ -729,7 +782,7 @@ class CduCreator:
         self.map_list = []
         self.catasto_alias = {}
         self.checkOdtBox = False
-        
+        self.checkMapBox = False        
         
         if self.out_tempdir_s != '':
             self.out_tempdir_s.cleanup()
@@ -743,7 +796,7 @@ class CduCreator:
     def run(self):
         #print(show_values_s)
         #print(self.sezioneIndex)
-        self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\n'))
+        self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\nPotrebbe richiedere un po\' di tempo a seconda del numero di particelle selezionate. Attendere la fine del processo.\n'))
         QCoreApplication.processEvents()
         
         if self.gruppoIndex == 0:
@@ -761,6 +814,7 @@ class CduCreator:
         param_file = open(self.param_txt, "w")
         param_file.write(self.cdu_path_folder + '\n')
         param_file.write(str(self.checkOdtBox) + '\n')
+        param_file.write(str(self.checkMapBox) + '\n')
         param_file.write(self.CduTitle + '\n')
         param_file.write(self.CduComune + '\n')
         param_file.write(self.input_logo_path + '\n')
@@ -772,7 +826,7 @@ class CduCreator:
         result = True
         # See if OK was pressed
         if result:
-            print('sono in run')
+            #print('sono in run')
             if self.out_tempdir_s == '':
                 self.out_tempdir_s = tempfile.TemporaryDirectory()
             else:
@@ -780,87 +834,31 @@ class CduCreator:
                 self.out_tempdir_s = tempfile.TemporaryDirectory()
             
             out_tempdir = self.out_tempdir_s
-            
-            # sel_foglio = self.foglio_values[self.foglioIndex - 1]
-            # print(sel_foglio)
-            # sel_particella = self.show_values[self.particellaIndex - 1]
-            # print(sel_particella)
-            
+                        
             selectedGroupIndex = self.dlg.gruppoComboBox.currentIndex()
-            print (selectedGroupIndex)
+            #print (selectedGroupIndex)
             selectedGroup = self.group_names[selectedGroupIndex - 1]
-            print (selectedGroup)
+            #print (selectedGroup)
             
-            if self.lyr.selectedFeatureCount() > 0 and self.sezioneIndex == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
-                selectedF = self.lyr.selectedFeatures()[0]
-                if self.lyr.fields().lookupField("SEZIONE") != -1:
-                    #print('la sezione esiste')
-                    sel_sezione = selectedF[self.sez_list[0].casefold()]
-                else:
-                    sel_sezione = 'NULL'
-
-                sel_foglio = selectedF[self.fog_list[0].casefold()]
-                #print(sel_foglio)
-                sel_particella = selectedF[self.map_list[0].casefold()]
-                #print(sel_particella)
-                if self.lyr.selectedFeatureCount() > 1:
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: sono state selezionate più particelle catastali, selezionare una sola particella\n'))
-                    return
-                else:
-                    selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
-                    #print(selected_feat)
-            elif self.foglioIndex != 0 and self.particellaIndex != 0:
-                #print('sel_sezione = {}'.format(sel_sezione))
-                sel_foglio = self.show_values_s[self.foglioIndex - 1]
-                #print('sel_foglio è {}'.format(sel_foglio))
-                sel_particella = self.show_values[self.particellaIndex - 1]
-                #print(sel_particella)
-                if self.lyr.selectedFeatureCount() > 0:
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: era già presente una selezione nel layer terreni_catastali, verrà sovrascritta con la particella foglio: {} e mappale: {}.\n'.format(sel_foglio, sel_particella)))
-                    QCoreApplication.processEvents()
-                if self.sezioneIndex != 0:
-                    sel_sezione = self.sezione_values[self.sezioneIndex - 1]
-                    #print('sel_sezione è {}'.format(sel_sezione))
-                    if sel_sezione == 'NULL' or sel_sezione == '':
-                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
-                        selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
-                    else:
-                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
-                        selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
-                else:
-                    print('sono in sezione == 0')
-                    self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
-                    selected_feat = QgsProcessingFeatureSourceDefinition(self.lyr.id(), True)
-                    selectedF = self.lyr.selectedFeatures()[0]
-                    if self.lyr.fields().lookupField("SEZIONE") != -1:
-                        sel_sezione = selectedF[self.sez_list[0].casefold()]
-                    else:
-                        sel_sezione = 'NULL'
-                    sel_foglio = selectedF[self.fog_list[0].casefold()]
-                    sel_particella = selectedF[self.map_list[0].casefold()]
-                if self.lyr.selectedFeatureCount() > 1:
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: sono state trovate più particelle catastali con foglio: {} e mappale: {}, selezionare una sola particella\n'.format(sel_foglio, sel_particella)))
-                    return
-
-            elif self.lyr.selectedFeatureCount() == 0 and self.foglioIndex == 0 and self.particellaIndex == 0:
+            if self.lyr.selectedFeatureCount() > 0:
+                selectedF = self.lyr.selectedFeatures()
+                self.dlg.textLog.append(self.tr('Sono state selezionate {} particelle.\n'.format(self.lyr.selectedFeatureCount())))
+                QCoreApplication.processEvents()
+            else:
                 self.dlg.textLog.append(self.tr('ATTENZIONE: nessuna particella è stata selezionata, selezionare un mappale\n'))
                 return
             
-            area_sel = self.lyr.selectedFeatures()[0].geometry().area()
+            #zoom alla selezione
             box = self.lyr.boundingBoxOfSelected()
             map = iface.mapCanvas()
             map.setExtent(box)
             map.refresh()
-            
-            #root = QgsProject.instance().layerTreeRoot()
-            #print(root.children())
-            #child = self.root.children()[0]
-            #print (child0.name())
 
             #crea gruppo per layers temporanei
             new_group_lyr = self.root.insertGroup(0, 'temp')
-
-            #salva la feat selezionata in uno shp, la aggiunge al gruppo e cambia lo stile (per usarla nell'img)
+            new_group_lyr.setExpanded(False)
+            
+            #salva le feat selezionate in uno shp, lo aggiunge al gruppo e cambia lo stile (per usarla nell'img)
             processing.run("native:saveselectedfeatures", { 'INPUT' : self.lyr, 
                         'OUTPUT' : '{}/aoi.shp'.format(out_tempdir.name)})
             aoi_pathfile = os.path.join(out_tempdir.name, 'aoi.shp')
@@ -872,165 +870,327 @@ class CduCreator:
             lyr_aoi.triggerRepaint()
             iface.layerTreeView().refreshLayerSymbology(lyr_aoi.id())
             
-            #legge gruppi, sottogruppi e layers nel layer tree e aggiunge a un dizionario solo quelli che intersecano l'area di interesse
-            lyrs = []
-            lyrs_tmp = []
-            layers = []
-            layers_name = []
-            subgr_name = []
-            layers_dict = {}
-            for child in self.root.children():
-                if isinstance(child, QgsLayerTreeGroup):
-                    if child.name() == selectedGroup:
-                        for gr in child.children():
-                            if isinstance(gr, QgsLayerTreeGroup):
-                            #print(gr.name())
-                                #subgr_name.append(gr.name())
-                                lyrs_tmp = gr.findLayers()
-                                for lt in lyrs_tmp:
-                                    lyrs.append(lt)
-                                    subgr_name.append(gr.name())
-                            elif isinstance(gr, QgsLayerTreeLayer):
-                                subgr_name.append('')
-                                lyrs.append(gr)
-                        g = 0
-                        for l in lyrs:
-                            #print(lyr.name())
-                            #print(lyr.layerId())
-                            processing.run("native:selectbylocation", {'INPUT': l.layer(),
-                                    'PREDICATE': [0],
-                                    'INTERSECT': selected_feat,
-                                    'METHOD': 0})
-                            if l.layer().selectedFeatureCount() > 0:
-                                layers.append(l.layer())
-                                layers_name.append(l.name())
-                                layers_dict[layers[-1]] = (subgr_name[g], layers_name[-1])
-                                l.layer().removeSelection()
-                            g += 1
-            #print(subgr_name)
-            #print(layers_dict)
-            if len(layers) > 0:
-                shp_count = 0
-                pos = 0
-                intersec_name = []
-                print_dict = {}
-                for key, value in layers_dict.items():
-                    #print(key)
-                    file_name = 'intersect_{}.gpkg'.format(shp_count)
-                    try:
-                        processing.run("native:clip", {'INPUT': key,
-                                            'OVERLAY': selected_feat,
-                                            'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
-                    except:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: sono stati riscontrati problemi nell\'intersezione fra la particella selezionata e il layer {}. Il CDU non verrà creato.\n'.format(layers_dict[key][1])))
-                        QCoreApplication.processEvents()
-                        rm_group = self.root.findGroup('temp')
-                        if rm_group is not None:
-                            for child in rm_group.children():
-                                QgsProject.instance().removeMapLayer(child.layerId())
-                            self.root.removeChildNode(rm_group)
-                        map.refresh()
-                        return
+            #iterazione sulle particelle selezionate, in questo ciclo vengono recuperate le informazioni dalle tabelle degli attributi dei layer urbanistici
+            sez_sel_list = []
+            fog_sel_list = []
+            map_sel_list = []
+            temp_feat = []
+            temp_feat_name = 0
+            temp_dict = {}
+            dict_to_print = {}
+            msg_nome_check = 0
+            msg_descr_check = 0
+            msg_rif_check = 0
+            msg_art_check = 0
+            count_map = 0
+            for ii in selectedF:
+                count_map += 1
+                self.dlg.textLog.append(self.tr('Elaborazione particella n. {} di {}.\n'.format(count_map, self.lyr.selectedFeatureCount())))
+                QCoreApplication.processEvents()
+                if self.lyr.fields().lookupField("SEZIONE") != -1:
+                    #print('la sezione esiste')
+                    sel_sezione = ii[self.sez_list[0].casefold()]
+                    sez_sel_list.append(sel_sezione)
+                    #print('la sezione è {}'.format(sel_sezione))
+                else:
+                    sel_sezione = 'NULL'
+                    sez_sel_list.append(sel_sezione)
 
-                    int_lyr_pathfile = os.path.join(out_tempdir.name, file_name)
-                    int_lyr_name = file_name.split('.')
-                    lyr_intersect = QgsVectorLayer(int_lyr_pathfile, int_lyr_name[0])
-                    QgsProject.instance().addMapLayers([lyr_intersect], False)
-                    new_group_lyr.insertLayer(pos, lyr_intersect)
-                    pos += 1
-                    shp_count += 1
-                    intersec_name.append(int_lyr_name[0])
-                    layers_dict[key] = (value[0], value[1], intersec_name[-1])
-                    #print(key.name())
-                    #print(value[0])
-                    #print(value[1])
-                    #print(intersec_name[-1])
+                sel_foglio = ii[self.fog_list[0].casefold()]
+                fog_sel_list.append(sel_foglio)
+                #print('il foglio è {}'.format(sel_foglio))
+                sel_particella = ii[self.map_list[0].casefold()]
+                map_sel_list.append(sel_particella)
+                #print('il mappale è {}'.format(sel_particella))
+                if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
+                    stringa_cat = '<p> Il terreno oggetto della richiesta e distinto in Catasto al foglio <b>' + sel_foglio + '</b> con il mappale <b>' + sel_particella + '</b> interseca le seguenti mappe del <b>' + selectedGroup + '</b>:<br></p>'
+                else:
+                    stringa_cat = '<p> Il terreno oggetto della richiesta e distinto in Catasto alla sezione <b>' + sel_sezione + '</b> e al foglio <b>' + sel_foglio + '</b> con il mappale <b>' + sel_particella + '</b> interseca le seguenti mappe del <b>' + selectedGroup + '</b>:<br></p>'
+
+                #salva la singola feat selezionata in un memory layer e lo aggiunge al gruppo (necessario per il clip)
+                vl = QgsVectorLayer("Polygon?crs={}".format(self.lyr.crs().authid()), "temporary_feat{}".format(temp_feat_name), "memory")
+                temp_feat.append(vl)
+                pr = vl.dataProvider()
+                vl.startEditing()
+                pr.addFeatures( [ ii ] )
+                vl.commitChanges()
+                QgsProject.instance().addMapLayer(vl, False)
+                new_group_lyr.insertLayer(-1, vl)
+                
+                for fl_feat in vl.getFeatures():
+                    area_sel = fl_feat.geometry().area()
+                temp_feat_name += 1
+                
+                #legge gruppi, sottogruppi e layers nel layer tree e aggiunge a un dizionario solo quelli che intersecano l'area di interesse
+                lyrs = []
+                lyrs_tmp = []
+                layers = []
+                layers_name = []
+                subgr_name = []
+                layers_dict = {}
+                
+                for child in self.root.children():
+                    if isinstance(child, QgsLayerTreeGroup):
+                        if child.name() == selectedGroup:
+                            for gr in child.children():
+                                if isinstance(gr, QgsLayerTreeGroup):
+                                #print(gr.name())
+                                    lyrs_tmp = gr.findLayers()
+                                    for lt in lyrs_tmp:
+                                        lyrs.append(lt)
+                                        subgr_name.append(gr.name())
+                                elif isinstance(gr, QgsLayerTreeLayer):
+                                    subgr_name.append('')
+                                    lyrs.append(gr)
+                            g = 0
+                            for l in lyrs:
+                                #print(lyr.name())
+                                #print(lyr.layerId())
+                                processing.run("native:selectbylocation", {'INPUT': l.layer(),
+                                        'PREDICATE': [0],
+                                        'INTERSECT': vl,
+                                        'METHOD': 0})
+                                if l.layer().selectedFeatureCount() > 0:
+                                    #print('{} interseca {}'.format(vl.name(), l.name()))
+                                    layers.append(l.layer())
+                                    layers_name.append(l.name())
+                                    layers_dict[layers[-1]] = (subgr_name[g], layers_name[-1])
+                                    l.layer().removeSelection()
+                                g += 1
+                
+                
+                if len(layers) > 0:
+                    #print(len(layers))
+                    shp_count = 0
+                    pos = 0
+                    intersec_name = []
+                    print_dict = {}
+                    empty_clip = 0
+                    check_feat = 0
+                    for key, value in layers_dict.items():
+                        file_name = 'intersect_{}_{}.gpkg'.format(shp_count, vl.name())
+                        try:
+                            processing.run("native:clip", {'INPUT': key,
+                                'OVERLAY': vl,
+                                'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
+                        except:
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: sono stati riscontrati problemi nell\'intersezione fra la particella selezionata e il layer {}. Il CDU non verrà creato.\n'.format(layers_dict[key][1])))
+                            QCoreApplication.processEvents()
+                            rm_group = self.root.findGroup('temp')
+                            if rm_group is not None:
+                                for child in rm_group.children():
+                                    QgsProject.instance().removeMapLayer(child.layerId())
+                                self.root.removeChildNode(rm_group)
+                            map.refresh()
+                            return
+
+                        int_lyr_pathfile = os.path.join(out_tempdir.name, file_name)
+                        int_lyr_name = file_name.split('.')
+                        lyr_intersect = QgsVectorLayer(int_lyr_pathfile, int_lyr_name[0])
+                        QgsProject.instance().addMapLayers([lyr_intersect], False)
+                        new_group_lyr.insertLayer(pos, lyr_intersect)
+                        pos += 1
+                        shp_count += 1
+                        intersec_name.append(int_lyr_name[0])
+                        layers_dict[key] = (value[0], value[1], intersec_name[-1])
+                        
+                        alias = key.attributeAliases()
+                        #print(key.name())
+                        #print(alias)
+                        descr_list = []
+                        nome_list = []
+                        rif_list = []
+                        art_list = []
+                        descr_check = 0
+                        nome_check = 0
+                        rif_check = 0
+                        art_check = 0
+                        for keys, values in alias.items():
+                            if values.casefold() == 'descrizione'.casefold() or keys.casefold() == 'descrizione'.casefold():
+                                descr_list.insert(0, keys)
+                                descr_check += 1
+                            if values.casefold() == 'nome'.casefold() or keys.casefold() == 'nome'.casefold():
+                                nome_list.insert(0, keys)
+                                nome_check += 1
+                            if values.casefold() == 'riferimento legislativo'.casefold() or keys.casefold() == 'riferimento legislativo'.casefold():
+                                rif_list.insert(0, keys)
+                                rif_check += 1
+                            if values.casefold() == 'articolo'.casefold() or keys.casefold() == 'articolo'.casefold():
+                                art_list.insert(0, keys)
+                                art_check += 1
+
+                        sel_lyr_int = QgsProject.instance().mapLayersByName(layers_dict[key][2])
+                        
+                        
+                        for fl in sel_lyr_int[0].getFeatures():
+                            if sel_lyr_int[0].featureCount() > 0:
+                                #print('ci sono features')
+                                #print('il num di feat è: {}'.format(sel_lyr_int[0].featureCount()))
+                                unique_id = layers_dict[key][2] + '_' + str(fl.id())
+                                area = fl.geometry().area()
+                                area_perc = area * 100 / area_sel
+                                if descr_check == 1:
+                                    descr = '- Descrizione: {}'.format(fl[descr_list[0]])
+                                    if fl[descr_list[0]] == NULL:
+                                        descr = '- Descrizione: -'
+                                else:
+                                    descr = '- Descrizione: -'
+                                if nome_check == 1:
+                                    nome = '- Nome: {}'.format(fl[nome_list[0]])
+                                    if fl[nome_list[0]] == NULL:
+                                        nome = '- Nome: -'
+                                else:
+                                    nome = '- Nome: -'
+                                if rif_check == 1:
+                                    rif_leg = '- Riferimento legislativo: {}'.format(fl[rif_list[0]])
+                                    if fl[rif_list[0]] == NULL:
+                                        rif_leg = '- Riferimento legislativo: -'
+                                else:
+                                    rif_leg = '- Riferimento legislativo: -'
+                                if art_check == 1:
+                                    rif_nto = '- Articolo: {}'.format(fl[art_list[0]])
+                                    if fl[art_list[0]] == NULL:
+                                        rif_nto = '- Articolo: -'
+                                else:
+                                    rif_nto = '- Articolo: -'
+                                if area < 0.5:
+                                    area_tot = '- Area intersecata (m<sup>2</sup>): {}'.format(area)
+                                else:
+                                    area_tot = '- Area intersecata (m<sup>2</sup>): {}'.format(round(area))
+                                if area_perc < 0.5:
+                                    area_tot_perc = '- Area intersecata (%): {}'.format(round(area_perc, 3))
+                                else:
+                                    area_tot_perc = '- Area intersecata (%): {}'.format(round(area_perc))
+                                if layers_dict[key][0]:
+                                    sbgr_lyr = '{} - {}'.format(layers_dict[key][0], layers_dict[key][1])
+                                else:
+                                    sbgr_lyr = '{}'.format(layers_dict[key][1])
+                                print_dict[unique_id] = (sbgr_lyr, nome, descr, rif_leg, rif_nto, area_tot, area_tot_perc)
+                                temp_dict[stringa_cat] = print_dict
+                                check_feat += 1
+
+                        ### CAPIRE COME METTERE i WARNING SULLA COLONNA NON TROVATA IN MODO CHE COMPAIA SOLO UNA VOLTA E NON UNA PER FEATURE SELEZIONATA                       
+                        print('descr_check = {}'.format(descr_check))   
+                        if nome_check == 0 and msg_nome_check == 0:
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Nome" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
+                            QCoreApplication.processEvents()
+                            msg_nome_check += 1
+                        if descr_check == 0 and msg_descr_check == 0:
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Descrizione" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
+                            QCoreApplication.processEvents()
+                            msg_descr_check += 1
+                        if rif_check == 0 and msg_rif_check == 0:
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Riferimento legislativo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
+                            QCoreApplication.processEvents()
+                            msg_rif_check += 1
+                        if art_check == 0 and msg_art_check == 0:
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Articolo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
+                            QCoreApplication.processEvents()
+                            msg_art_check += 1
                     
-                    alias = key.attributeAliases()
-                    #print(key.name())
-                    #print(alias)
-                    descr_list = []
-                    nome_list = []
-                    rif_list = []
-                    art_list = []
-                    descr_check = 0
-                    nome_check = 0
-                    rif_check = 0
-                    art_check = 0
-                    for keys, values in alias.items():
-                        if values.casefold() == 'descrizione'.casefold() or keys.casefold() == 'descrizione'.casefold():
-                            descr_list.insert(0, keys)
-                            descr_check += 1
-                        if values.casefold() == 'nome'.casefold() or keys.casefold() == 'nome'.casefold():
-                            nome_list.insert(0, keys)
-                            nome_check += 1
-                        if values.casefold() == 'riferimento legislativo'.casefold() or keys.casefold() == 'riferimento legislativo'.casefold():
-                            rif_list.insert(0, keys)
-                            rif_check += 1
-                        if values.casefold() == 'articolo'.casefold() or keys.casefold() == 'articolo'.casefold():
-                            art_list.insert(0, keys)
-                            art_check += 1
-
-                    sel_lyr_int = QgsProject.instance().mapLayersByName(layers_dict[key][2])
-
-                    for fl in sel_lyr_int[0].getFeatures():
-                        unique_id = layers_dict[key][2] + '_' + str(fl.id())
-                        area = fl.geometry().area()
-                        area_perc = area * 100 / area_sel
-                        if descr_check == 1:
-                            descr = '- Descrizione: {}'.format(fl[descr_list[0]])
-                            if fl[descr_list[0]] == NULL:
-                                descr = '- Descrizione: -'
+                    #check su eventuali particelle che non intersecano nulla ma per cui il clip genera comunque un layer senza features
+                    if check_feat == 0:
+                        if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer.\n'.format(sel_foglio, sel_particella)))
+                            QCoreApplication.processEvents()
                         else:
-                            descr = '- Descrizione: -'
-                        if nome_check == 1:
-                            nome = '- Nome: {}'.format(fl[nome_list[0]])
-                            if fl[nome_list[0]] == NULL:
-                                nome = '- Nome: -'
-                        else:
-                            nome = '- Nome: -'
-                        if rif_check == 1:
-                            rif_leg = '- Riferimento legislativo: {}'.format(fl[rif_list[0]])
-                            if fl[rif_list[0]] == NULL:
-                                rif_leg = '- Riferimento legislativo: -'
-                        else:
-                            rif_leg = '- Riferimento legislativo: -'
-                        if art_check == 1:
-                            rif_nto = '- Articolo: {}'.format(fl[art_list[0]])
-                            if fl[art_list[0]] == NULL:
-                                rif_nto = '- Articolo: -'
-                        else:
-                            rif_nto = '- Articolo: -'
-                        if area < 0.5:
-                            area_tot = '- Area intersecata (m<sup>2</sup>): {}'.format(area)
-                        else:
-                            area_tot = '- Area intersecata (m<sup>2</sup>): {}'.format(round(area))
-                        if area_perc < 0.5:
-                            area_tot_perc = '- Area intersecata (%): {}'.format(round(area_perc, 3))
-                        else:
-                            area_tot_perc = '- Area intersecata (%): {}'.format(round(area_perc))
-                        if layers_dict[key][0]:
-                            sbgr_lyr = '{} - {}'.format(layers_dict[key][0], layers_dict[key][1])
-                        else:
-                            sbgr_lyr = '{}'.format(layers_dict[key][1])
-                        print_dict[unique_id] = (sbgr_lyr, nome, descr, rif_leg, rif_nto, area_tot, area_tot_perc)
-                #print(print_dict)
-                
-                    if nome_check == 0:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Nome" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer.\n'.format(sel_sezione, sel_foglio, sel_particella)))
+                            QCoreApplication.processEvents()
+                            
+                    for key_td, value_td in temp_dict.items():
+                        #print('questa è la chiave: {}'.format(key_pl))
+                        #print('questa è il valore: {}'.format(value_pl))
+                        text = ''
+                        for ktd, vtd in value_td.items():
+                            if self.checkAreaBox == True and self.checkAreaPercBox == True:
+                                text += '<p><b>' + vtd[0] + '</b><br>' + vtd[1] + '<br>' + vtd[2] + '<br>' + vtd[3] + '<br>' + vtd[4] + '<br>' + vtd[5] + '<br>' + vtd[6] +'<br><br></p>'
+                            elif self.checkAreaBox == True and self.checkAreaPercBox == False:
+                                text += '<p><b>' + vtd[0] + '</b><br>' + vtd[1] + '<br>' + vtd[2] + '<br>' + vtd[3] + '<br>' + vtd[4] + '<br>' + vtd[5] + '<br><br></p>'
+                            elif self.checkAreaBox == False and self.checkAreaPercBox == True:
+                                text += '<p><b>' + vtd[0] + '</b><br>' + vtd[1] + '<br>' + vtd[2] + '<br>' + vtd[3] + '<br>' + vtd[4] + '<br>' + vtd[6] + '<br><br></p>'
+                            else:
+                                text += '<p><b>' + vtd[0] + '</b><br>' + vtd[1] + '<br>' + vtd[2] + '<br>' + vtd[3] + '<br>' + vtd[4] + '<br><br></p>'
+                        dict_to_print[key_td] = text
+                        
+                else:
+                    if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
+                        self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer.\n'.format(sel_foglio, sel_particella)))
                         QCoreApplication.processEvents()
-                    if descr_check == 0:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Descrizione" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
-                        QCoreApplication.processEvents()
-                    if rif_check == 0:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Riferimento legislativo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
-                        QCoreApplication.processEvents()
-                    if art_check == 0:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Articolo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
+                    else:
+                        self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer.\n'.format(sel_sezione, sel_foglio, sel_particella)))
                         QCoreApplication.processEvents()
 
-                self.lyr.removeSelection()
-                
+            self.lyr.removeSelection()
+
+            #crea la printer per stampare il pdf
+            printer = QPrinter()
+            printer.setPageSize(QPrinter.A4)
+            #printer.setPageMargins(10, 10, 10, 10, QPrinter.Millimeter)
+            printer.setFullPage(True)
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            if self.cdu_file_name == '':
+                cdu_pdf_name = 'cdu_{}.pdf'.format(datetime.now().strftime("%d%m%Y_%H%M%S"))
+            else:
+                cdu_pdf_name = '{}.pdf'.format(self.cdu_file_name)
+            #print('il nome file è {}'.format(cdu_pdf_name))
+            cdu_pdf_path = os.path.join(self.cdu_path_folder, cdu_pdf_name)
+            printer.setOutputFileName(cdu_pdf_path)
+
+            #compone l'html e stampa il pdf
+            stringa = '<!DOCTYPE html><html><head><style>p {font-size: 13px;}</style></head><body>'
+            if self.input_logo_path != '':
+                if os.path.isfile(self.input_logo_path):
+                    im = Image.open(self.input_logo_path)
+                    #print(im.size)   # return value is a tuple, ex.: (1200, 800)
+                    w = im.size[0]
+                    h = im.size[1]
+                    fw = 60 * w/h
+                    stringa += '<p style="text-align:center; vertical-align: middle;"><img height="60" width="' + str(round(fw)) + '" src="' + self.input_logo_path + '"></p>'
+                else:
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: il file {} non è stato trovato, il Logo non verrà stampato.\n'.format(self.input_logo_path)))
+                    QCoreApplication.processEvents()
+            stringa += '<h2 style="text-align:center">' + self.CduTitle + ' - Comune di ' + self.CduComune + '</h2>'
+            stringa += '<hr><br>'
+            if self.protocollo == '':
+                stringa += '<p>Prot. n°<br>'
+            else:
+                stringa += '<p>Prot. n° ' + self.protocollo + '<br>'
+            if self.checkDataBox == False:
+                stringa += 'Lì, </p>'
+            else:
+                stringa += 'Lì, ' + self.data.toString( Qt.DefaultLocaleShortDate) + '</p>'
+            stringa += '<h3 style="text-align:center">Il Responsabile del Servizio</h3>'
+            if self.richiedente == '':
+                stringa += '<p>Vista la richiesta del _______________________________________________________________________ <br><br>'
+            else:
+                stringa += '<p>Vista la richiesta del <i>' + self.richiedente + ' </i>'
+            if self.checkDataBox == False:
+                stringa += 'presentata in data ____/____/____ '
+            else:
+                stringa += 'presentata in data <i>' + self.data.toString( Qt.DefaultLocaleShortDate) + '  </i>'
+            if self.protocollo == '':
+                stringa += 'prot. n. ________;<br></p>'
+            else:
+                stringa += 'prot. n. <i>' + self.protocollo + '</i>;<br></p>'
+            if self.input_txt_path != '':
+                if os.path.isfile(self.input_txt_path):
+                    txt_file = open(self.input_txt_path, "r")
+                    #print(file.read())
+                    for line in txt_file:
+                        stringa += '<div style="font-size: 13px;">' + line + '</div>'
+                    txt_file.close()
+                else:
+                    self.dlg.textLog.append(self.tr('ATTENZIONE: il file TXT {} non è stato trovato, il Testo non verrà stampato.\n'.format(self.input_txt_path)))
+                    QCoreApplication.processEvents()
+            stringa += '<h3 style="text-align:center">Attesta e Certifica che</h3>'
+            
+            
+            for key_dtp, value_dtp in dict_to_print.items():
+                stringa += key_dtp
+                stringa += value_dtp
+                                   
+
+            if self.checkMapBox == True:
                 #crea immagine della mappa centrata sull'area di interesse
                 img = QImage(QSize(500, 500), QImage.Format_ARGB32_Premultiplied)
 
@@ -1046,145 +1206,58 @@ class CduCreator:
                 rect.scale(2.5)
                 settings.setExtent(rect)
                 settings.setOutputSize(img.size())
-
-                #crea la printer per stampare il pdf
-                printer = QPrinter()
-                printer.setPageSize(QPrinter.A4)
-                #printer.setPageMargins(10, 10, 10, 10, QPrinter.Millimeter)
-                printer.setFullPage(True)
-                printer.setOutputFormat(QPrinter.PdfFormat)
-                if self.cdu_file_name == '':
-                    if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
-                        print('sezione no')
-                        cdu_pdf_name = 'cdu_F{}_M{}_{}.pdf'.format(sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
-                    else:
-                        print('sezione si')
-                        cdu_pdf_name = 'cdu_S_{}_F{}_M{}_{}.pdf'.format(sel_sezione, sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
-                else:
-                    cdu_pdf_name = '{}.pdf'.format(self.cdu_file_name)
-                #print('il nome file è {}'.format(cdu_pdf_name))
-                cdu_pdf_path = os.path.join(self.cdu_path_folder, cdu_pdf_name)
-                printer.setOutputFileName(cdu_pdf_path)
-
+                
                 #salva l'immagine della mappa come png
                 pdfPainter = QPainter()
                 pdfPainter.begin(img)
                 render = QgsMapRendererCustomPainterJob(settings, pdfPainter)
                 render.start()
                 render.waitForFinished()
+                pdfPainter.setPen(QPen(QColor(51, 51, 51, 255), 2.0))
+                pdfPainter.drawRect(0,0,500,500);
                 pdfPainter.end()
                 img_path_file = os.path.join(out_tempdir.name, 'map.png')
                 img.save(img_path_file)
-
-                #compone l'html e stampa il pdf
-                stringa = '<!DOCTYPE html><html><head><style>p {font-size: 13px;}</style></head><body>'
-                if self.input_logo_path != '':
-                    if os.path.isfile(self.input_logo_path):
-                        im = Image.open(self.input_logo_path)
-                        #print(im.size)   # return value is a tuple, ex.: (1200, 800)
-                        w = im.size[0]
-                        h = im.size[1]
-                        fw = 60 * w/h
-                        stringa += '<p style="text-align:center; vertical-align: middle;"><img height="60" width="' + str(round(fw)) + '" src="' + self.input_logo_path + '"></p>'
-                    else:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: il file {} non è stato trovato, il Logo non verrà stampato.\n'.format(self.input_logo_path)))
-                        QCoreApplication.processEvents()
-                stringa += '<h2 style="text-align:center">' + self.CduTitle + ' - Comune di ' + self.CduComune + '</h2>'
-                stringa += '<hr><br>'
-                if self.protocollo == '':
-                    stringa += '<p>Prot. n°<br>'
-                else:
-                    stringa += '<p>Prot. n° ' + self.protocollo + '<br>'
-                if self.checkDataBox == False:
-                    stringa += 'Lì, </p>'
-                else:
-                    stringa += 'Lì, ' + self.data.toString( Qt.DefaultLocaleShortDate) + '</p>'
-                stringa += '<h3 style="text-align:center">Il Responsabile del Servizio</h3>'
-                if self.richiedente == '':
-                    stringa += '<p>Vista la richiesta del _______________________________________________________________________ <br><br>'
-                else:
-                    stringa += '<p>Vista la richiesta del <i>' + self.richiedente + ' </i>'
-                if self.checkDataBox == False:
-                    stringa += 'presentata in data ____/____/____ '
-                else:
-                    stringa += 'presentata in data <i>' + self.data.toString( Qt.DefaultLocaleShortDate) + '  </i>'
-                if self.protocollo == '':
-                    stringa += 'prot. n. ________;<br></p>'
-                else:
-                    stringa += 'prot. n. <i>' + self.protocollo + '</i>;<br></p>'
-                if self.input_txt_path != '':
-                    if os.path.isfile(self.input_txt_path):
-                        txt_file = open(self.input_txt_path, "r")
-                        #print(file.read())
-                        for line in txt_file:
-                            stringa += '<div style="font-size: 13px;">' + line + '</div>'
-                        txt_file.close()
-                    else:
-                        self.dlg.textLog.append(self.tr('ATTENZIONE: il file TXT {} non è stato trovato, il Testo non verrà stampato.\n'.format(self.input_txt_path)))
-                        QCoreApplication.processEvents()
-                stringa += '<h3 style="text-align:center">Attesta e Certifica che</h3>'
-                if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
-                    stringa += '<p> Il terreno oggetto della richiesta e distinto in Catasto al foglio <b>' + sel_foglio + '</b> con il mappale <b>' + sel_particella + '</b> interseca le seguenti mappe del <b>' + selectedGroup + '</b>:<br></p>'
-                else:
-                    stringa += '<p> Il terreno oggetto della richiesta e distinto in Catasto alla sezione <b>' + sel_sezione + '</b> e al foglio <b>' + sel_foglio + '</b> con il mappale <b>' + sel_particella + '</b> interseca le seguenti mappe del <b>' + selectedGroup + '</b>:<br></p>'
-                for key, value in print_dict.items():
-                    if self.checkAreaBox == True and self.checkAreaPercBox == True:
-                        stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br>' + value[5] + '<br>' + value[6] +'<br><br></p>'
-                    elif self.checkAreaBox == True and self.checkAreaPercBox == False:
-                        stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br>' + value[5] + '<br><br></p>'
-                    elif self.checkAreaBox == False and self.checkAreaPercBox == True:
-                        stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br>' + value[6] + '<br><br></p>'
-                    else:
-                        stringa += '<p><b>' + value[0] + '</b><br>' + value[1] + '<br>' + value[2] + '<br>' + value[3] + '<br>' + value[4] + '<br><br></p>'
-                #####capire perchè non funziona il tag style dentro l'img..se provo a creare un file htm con quel tag e lo visualizzo su web funziona vedi file test.html in immagini
+                
                 stringa += '<p style="text-align:center"><img src="' + img_path_file + '"></p>'
-                stringa += '<p style="text-align:center"> Il presente CDU è stato creato automaticamente in data {} alle ore {} utilizzando il plugin CDU Creator di QGIS.</p><br>'.format(datetime.now().strftime("%d-%m-%Y"), datetime.now().strftime("%H:%M:%S"))
-                stringa += '<p>Si rilascia la presente per gli usi consentiti dalla legge.</p><br><p style="text-align:right"> Il Responsabile del Servizio</p>'
-                stringa += '</body></html>'
-                doc = QTextDocument()
-                doc.setHtml(stringa)
-                doc.print(printer)
-                self.dlg.textLog.append(self.tr('Il file PDF {} è stato salvato nella cartella {}.\n'.format(cdu_pdf_name, self.cdu_path_folder)))
+            stringa += '<p style="text-align:center"> Il presente CDU è stato creato automaticamente in data {} alle ore {} utilizzando il plugin CDU Creator di QGIS.</p><br>'.format(datetime.now().strftime("%d-%m-%Y"), datetime.now().strftime("%H:%M:%S"))
+            stringa += '<p>Si rilascia la presente per gli usi consentiti dalla legge.</p><br><p style="text-align:right"> Il Responsabile del Servizio</p>'
+            stringa += '</body></html>'
+            doc = QTextDocument()
+            doc.setHtml(stringa)
+            doc.print(printer)
+            self.dlg.textLog.append(self.tr('Il file PDF {} è stato salvato nella cartella {}.\n'.format(cdu_pdf_name, self.cdu_path_folder)))
+            QCoreApplication.processEvents()
+            if self.checkOdtBox == True:
+                if self.cdu_file_name == '':
+                    cdu_odt_name = 'cdu_{}.odt'.format(datetime.now().strftime("%d%m%Y_%H%M%S"))
+                else:
+                    cdu_odt_name = '{}.odt'.format(self.cdu_file_name)
+                #print('il nome file è {}'.format(cdu_pdf_name))
+                cdu_odt_path = os.path.join(self.cdu_path_folder, cdu_odt_name)
+                writer = QTextDocumentWriter()
+                #print(writer.supportedDocumentFormats())
+                writer.setFormat(QByteArray(b'ODF'))
+                writer.setFileName(cdu_odt_path)
+                writer.write(doc)
+                self.dlg.textLog.append(self.tr('Il file ODT {} è stato salvato nella cartella {}.\n'.format(cdu_odt_name, self.cdu_path_folder)))
                 QCoreApplication.processEvents()
-                if self.checkOdtBox == True:
-                    if self.cdu_file_name == '':
-                        if sel_sezione == NULL or sel_sezione == '' or sel_sezione == '-' or sel_sezione == 'NULL':
-                            print('sezione no')
-                            cdu_odt_name = 'cdu_F{}_M{}_{}.odt'.format(sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
-                        else:
-                            print('sezione si')
-                            cdu_odt_name = 'cdu_S_{}_F{}_M{}_{}.odt'.format(sel_sezione, sel_foglio, sel_particella, datetime.now().strftime("%d%m%Y_%H%M%S"))
+                    
+            self.dlg.textLog.append(self.tr('ATTENDERE...il processo terminerà a breve.\n'))
+            QCoreApplication.processEvents()
+            for k, sfm in enumerate(sez_sel_list):
+                if self.sezioneIndex != 0:
+                    if sfm == 'NULL' or sfm == '':
+                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
                     else:
-                        cdu_odt_name = '{}.odt'.format(self.cdu_file_name)
-                    #print('il nome file è {}'.format(cdu_pdf_name))
-                    cdu_odt_path = os.path.join(self.cdu_path_folder, cdu_odt_name)
-                    writer = QTextDocumentWriter()
-                    #print(writer.supportedDocumentFormats())
-                    writer.setFormat(QByteArray(b'ODF'))
-                    writer.setFileName(cdu_odt_path)
-                    writer.write(doc)
-                    self.dlg.textLog.append(self.tr('Il file ODT {} è stato salvato nella cartella {}.\n'.format(cdu_odt_name, self.cdu_path_folder)))
-                    QCoreApplication.processEvents()
-            else:
-                if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dal foglio {} e mappale {} non interseca alcun layer. Il CDU non verrà creato.\n'.format(sel_foglio, sel_particella)))
-                    QCoreApplication.processEvents()
+                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sfm, self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
                 else:
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer. Il CDU non verrà creato.\n'.format(sel_sezione, sel_foglio, sel_particella)))
-                    QCoreApplication.processEvents()
-      
-            if self.sezioneIndex != 0:
-                if sel_sezione == 'NULL' or sel_sezione == '':
-                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
-                else:
-                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))                
-            else:
-                if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == NULL:
-                    #print('sez null')
-                    self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
-                else:
-                    #print('sez not null')
-                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella))
+                    if sfm == 'NULL' or sfm == '' or sfm == NULL:
+                        print('sez null')
+                        self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
+                    else:
+                        #print('sez not null')
+                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sfm, self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
 
             #rimuove il gruppo temporaneo
             rm_group = self.root.findGroup('temp')
