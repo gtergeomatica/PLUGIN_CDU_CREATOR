@@ -113,7 +113,7 @@ class CduCreator:
         self.map_list = []
         self.catasto_alias = {}
         self.checkOdtBox = False
-        self.checkMapBox = False        
+        self.checkMapBox = False 
         
 
     # noinspection PyMethodMayBeStatic
@@ -304,6 +304,7 @@ class CduCreator:
                 self.dlg.urlTxt.textChanged.connect(self.handleTxt)
                 self.dlg.titolo.textChanged.connect(self.handleTitle)
                 self.dlg.nomeComune.textChanged.connect(self.handleComune)
+                #self.dlg.textParticelle.textChanged.connect(self.handleParticelleText)
                 self.dlg.nameLineEdit.textChanged.connect(self.handleFileName)
                 self.dlg.protocolloLineEdit.textChanged.connect(self.handleProtocollo)
                 self.dlg.richiedenteEdit.textChanged.connect(self.handleRichiedente)
@@ -312,11 +313,15 @@ class CduCreator:
                 #self.dlg.printAreaBox.setText("m<sup>2</sup>")
                 #self.dlg.dateEdit.setDate(QDate(2019, 9, 13))
                 self.dlg.dateEdit.dateChanged.connect(self.handleData)
+                self.dlg.textParticelle.textChanged.connect(self.handleRemoveButton)
                 self.dlg.printAreaBox.stateChanged.connect(self.handleAreaBox)
                 self.dlg.printAreaPercBox.stateChanged.connect(self.handleAreaPercBox)
                 self.dlg.odtCheckBox.stateChanged.connect(self.handleOdtFile)
                 self.dlg.mapCheckBox.stateChanged.connect(self.handleMapFile)
                 self.dlg.addButton.clicked.connect(self.addMapButton)
+                self.dlg.removeButton.clicked.connect(self.removeMapButton)
+                self.dlg.reloadButton.clicked.connect(self.reloadMapButton)
+                self.dlg.reloadButton.setToolTip('Aggiorna l\'elenco delle particelle selezionate indicando solo quelle effettivamente selezionate sul layer terreni_catastali') 
                 self.dlg.pushButtonOk.clicked.connect(self.run)
                 self.dlg.rejected.connect(self.closePlugin)
                 
@@ -334,6 +339,11 @@ class CduCreator:
                                 self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(sel_sezione, sel_foglio, sel_particella)))
                         else:
                             self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(sel_foglio, sel_particella)))
+                    #self.dlg.removeButton.setEnabled(True)
+                    box = self.lyr.boundingBoxOfSelected()
+                    map = iface.mapCanvas()
+                    map.setExtent(box)
+                    map.refresh()
                         
                     self.dlg.textLog.append(self.tr('ATTENZIONE: è già presente una selezione nel layer terreni_catastali.\nUlteriori selezioni utilizzando i menù a tendina saranno aggiunte a quella esistente.'))
                     QCoreApplication.processEvents()
@@ -566,6 +576,7 @@ class CduCreator:
         return unique_list
         
     def addMapButton(self):
+        self.dlg.removeButton.setEnabled(True)
         if self.foglioIndex != 0 and self.particellaIndex != 0:
             #print('sel_sezione = {}'.format(sel_sezione))
             sel_foglio = self.show_values_s[self.foglioIndex - 1]
@@ -588,13 +599,85 @@ class CduCreator:
                     sel_sezione = selectedF[self.sez_list[0].casefold()]
                 else:
                     sel_sezione = 'NULL'
-                sel_foglio = selectedF[self.fog_list[0].casefold()]
-                sel_particella = selectedF[self.map_list[0].casefold()]
+                #sel_foglio = selectedF[self.fog_list[0].casefold()]
+                #sel_particella = selectedF[self.map_list[0].casefold()]
                 self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(sel_foglio, sel_particella)))
+            box = self.lyr.boundingBoxOfSelected()
+            map = iface.mapCanvas()
+            map.setExtent(box)
+            map.refresh()
+                
         else:
             self.dlg.textLog.append(self.tr('ATTENZIONE: è necessario selezionare almeno un valore per il foglio e uno per il mappale.'))
             return
+            
+    def removeMapButton(self):
+        if self.foglioIndex != 0 and self.particellaIndex != 0:
+            #print('sel_sezione = {}'.format(sel_sezione))
+            sel_foglio = self.show_values_s[self.foglioIndex - 1]
+            #print('sel_foglio è {}'.format(sel_foglio))
+            sel_particella = self.show_values[self.particellaIndex - 1]
+            #print(sel_particella)
+            if self.sezioneIndex != 0:
+                sel_sezione = self.sezione_values[self.sezioneIndex - 1]
+                #print('sel_sezione è {}'.format(sel_sezione))
+                if sel_sezione == 'NULL' or sel_sezione == '':
+                    self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 3)
+                else:
+                    #print('sono qui')
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 3)
+                testo = self.tr('Sez = {}, Fog = {}, Map = {} '.format(sel_sezione, sel_foglio, sel_particella))
+            else:
+                #print('sono in sezione == 0')
+                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 3)
+                selectedF = self.lyr.selectedFeatures()[0]
+                if self.lyr.fields().lookupField("SEZIONE") != -1:
+                    sel_sezione = selectedF[self.sez_list[0].casefold()]
+                else:
+                    sel_sezione = 'NULL'
+                #sel_foglio = selectedF[self.fog_list[0].casefold()]
+                #sel_particella = selectedF[self.map_list[0].casefold()]
+                testo = self.tr('Fog = {}, Map = {} '.format(sel_foglio, sel_particella))
+            lines = self.dlg.textParticelle.toPlainText().split("\n")
+            #print(lines)
+            for i in lines:
+                if i == testo:
+                    lines.remove(i)
+            self.dlg.textParticelle.clear()
+            for k in lines:
+                if k != '':
+                    self.dlg.textParticelle.append(k + '\n')
+ 
+            #print(lines)
+            box = self.lyr.boundingBoxOfSelected()
+            map = iface.mapCanvas()
+            map.setExtent(box)
+            map.refresh()
+                    
+        else:
+            self.dlg.textLog.append(self.tr('ATTENZIONE: è necessario selezionare almeno un valore per il foglio e uno per il mappale.'))
+            return
+            
+    def reloadMapButton(self):
+        self.dlg.textParticelle.clear()
+        if self.lyr.selectedFeatureCount() > 0:
+            for sf in self.lyr.selectedFeatures():
+                sel_foglio = sf[self.fog_list[0].casefold()]
+                sel_particella = sf[self.map_list[0].casefold()]
+                if self.lyr.fields().lookupField("SEZIONE") != -1:
+                    sel_sezione = sf[self.sez_list[0].casefold()]
+                    if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
+                        self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(sel_foglio, sel_particella)))
+                    else:
+                        self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(sel_sezione, sel_foglio, sel_particella)))
+                else:
+                    self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(sel_foglio, sel_particella)))
         
+            box = self.lyr.boundingBoxOfSelected()
+            map = iface.mapCanvas()
+            map.setExtent(box)
+            map.refresh()
+
     def gruppoBox(self, idxg):
         #print('gruppo')
         self.gruppoIndex = idxg
@@ -615,6 +698,12 @@ class CduCreator:
             self.checkDataBox = False
             self.dlg.label_11.setEnabled(False)
             self.dlg.dateEdit.setEnabled(False)
+            
+    def handleRemoveButton(self):
+        if str(self.dlg.textParticelle.toPlainText()) != '':
+            self.dlg.removeButton.setEnabled(True)
+        else:
+            self.dlg.removeButton.setEnabled(False)
         
     def handleData(self, val):
         self.data = val
@@ -737,16 +826,20 @@ class CduCreator:
         self.dlg.urlTxt.textChanged.disconnect(self.handleTxt)
         self.dlg.titolo.textChanged.disconnect(self.handleTitle)
         self.dlg.nomeComune.textChanged.disconnect(self.handleComune)
+        #self.dlg.textParticelle.textChanged.disconnect(self.handleParticelleText)
         self.dlg.nameLineEdit.textChanged.disconnect(self.handleFileName)
         self.dlg.protocolloLineEdit.textChanged.disconnect(self.handleProtocollo)
         self.dlg.richiedenteEdit.textChanged.disconnect(self.handleRichiedente)
         self.dlg.DataCheckBox.stateChanged.disconnect(self.handleDataCheck)
+        self.dlg.textParticelle.textChanged.disconnect(self.handleRemoveButton)
         self.dlg.dateEdit.dateChanged.connect(self.handleData)
         self.dlg.printAreaBox.stateChanged.disconnect(self.handleAreaBox)
         self.dlg.printAreaPercBox.stateChanged.disconnect(self.handleAreaPercBox)
         self.dlg.odtCheckBox.stateChanged.disconnect(self.handleOdtFile)
         self.dlg.mapCheckBox.stateChanged.disconnect(self.handleMapFile)
         self.dlg.addButton.clicked.disconnect(self.addMapButton)
+        self.dlg.removeButton.clicked.disconnect(self.removeMapButton)
+        self.dlg.reloadButton.clicked.disconnect(self.reloadMapButton)
         self.dlg.pushButtonOk.clicked.disconnect(self.run)
         self.dlg.rejected.disconnect(self.closePlugin)
         
@@ -782,7 +875,7 @@ class CduCreator:
         self.map_list = []
         self.catasto_alias = {}
         self.checkOdtBox = False
-        self.checkMapBox = False        
+        self.checkMapBox = False 
         
         if self.out_tempdir_s != '':
             self.out_tempdir_s.cleanup()
@@ -967,6 +1060,7 @@ class CduCreator:
                     print_dict = {}
                     empty_clip = 0
                     check_feat = 0
+                    check_double = 0
                     for key, value in layers_dict.items():
                         file_name = 'intersect_{}_{}.gpkg'.format(shp_count, vl.name())
                         try:
@@ -1066,11 +1160,11 @@ class CduCreator:
                                 else:
                                     sbgr_lyr = '{}'.format(layers_dict[key][1])
                                 print_dict[unique_id] = (sbgr_lyr, nome, descr, rif_leg, rif_nto, area_tot, area_tot_perc)
-                                temp_dict[stringa_cat] = print_dict
+                                if not stringa_cat in temp_dict.keys():
+                                    temp_dict[stringa_cat] = print_dict
+                                    check_double += 1
                                 check_feat += 1
 
-                        ### CAPIRE COME METTERE i WARNING SULLA COLONNA NON TROVATA IN MODO CHE COMPAIA SOLO UNA VOLTA E NON UNA PER FEATURE SELEZIONATA                       
-                        print('descr_check = {}'.format(descr_check))   
                         if nome_check == 0 and msg_nome_check == 0:
                             self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Nome" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
                             QCoreApplication.processEvents()
@@ -1087,7 +1181,7 @@ class CduCreator:
                             self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Articolo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
                             QCoreApplication.processEvents()
                             msg_art_check += 1
-                    
+
                     #check su eventuali particelle che non intersecano nulla ma per cui il clip genera comunque un layer senza features
                     if check_feat == 0:
                         if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
@@ -1097,6 +1191,15 @@ class CduCreator:
                             self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer.\n'.format(sel_sezione, sel_foglio, sel_particella)))
                             QCoreApplication.processEvents()
                             
+                    #check su eventuali particelle con setesso valore per sezione, foglio e mappale
+                    if check_double == 0:
+                        if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: è stata trovata un\'altra particella con foglio {} e mappale {}. Non verrà stampata nel CDU. Verificare il layer terreni_catastali.\n'.format(sel_foglio, sel_particella)))
+                            QCoreApplication.processEvents()
+                        else:
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: è stata trovata un\'altra particella con sezione {}, foglio {} e mappale {}. Non verrà stampata nel CDU. Verificare il layer terreni_catastali.\n'.format(sel_sezione, sel_foglio, sel_particella)))
+                            QCoreApplication.processEvents()
+
                     for key_td, value_td in temp_dict.items():
                         #print('questa è la chiave: {}'.format(key_pl))
                         #print('questa è il valore: {}'.format(value_pl))
@@ -1119,7 +1222,7 @@ class CduCreator:
                     else:
                         self.dlg.textLog.append(self.tr('ATTENZIONE: il terreno identificato dalla sezione {}, foglio {} e mappale {} non interseca alcun layer.\n'.format(sel_sezione, sel_foglio, sel_particella)))
                         QCoreApplication.processEvents()
-
+            
             self.lyr.removeSelection()
 
             #crea la printer per stampare il pdf
@@ -1247,7 +1350,7 @@ class CduCreator:
             QCoreApplication.processEvents()
             for k, sfm in enumerate(sez_sel_list):
                 if self.sezioneIndex != 0:
-                    if sfm == 'NULL' or sfm == '':
+                    if sfm == 'NULL' or sfm == '' or sfm == NULL:
                         self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
                     else:
                         self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sfm, self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
