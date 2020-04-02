@@ -889,8 +889,6 @@ class CduCreator:
     def run(self):
         #print(show_values_s)
         #print(self.sezioneIndex)
-        self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\nPotrebbe richiedere un po\' di tempo a seconda del numero di particelle selezionate. Attendere la fine del processo.\n'))
-        QCoreApplication.processEvents()
         
         if self.gruppoIndex == 0:
             self.dlg.textLog.append(self.tr('ATTENZIONE: nessun gruppo è stato selezionato, selezionare il gruppo contenete i dati urbanistici\n'))
@@ -902,7 +900,10 @@ class CduCreator:
             
         if os.path.isdir(self.cdu_path_folder) == False:
             self.dlg.textLog.append(self.tr('ERRORE: la cartella {} non esiste\n'.format(self.cdu_path_folder)))
-            return
+            return
+            
+        self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\nPotrebbe richiedere un po\' di tempo a seconda del numero di particelle selezionate. Attendere la fine del processo.\n'))
+        QCoreApplication.processEvents()
             
         param_file = open(self.param_txt, "w")
         param_file.write(self.cdu_path_folder + '\n')
@@ -938,7 +939,7 @@ class CduCreator:
                 self.dlg.textLog.append(self.tr('Sono state selezionate {} particelle.\n'.format(self.lyr.selectedFeatureCount())))
                 QCoreApplication.processEvents()
             else:
-                self.dlg.textLog.append(self.tr('ATTENZIONE: nessuna particella è stata selezionata, selezionare un mappale\n'))
+                self.dlg.textLog.append(self.tr('ATTENZIONE: nessuna particella è stata selezionata, selezionare almeno un mappale\n'))
                 return
             
             #zoom alla selezione
