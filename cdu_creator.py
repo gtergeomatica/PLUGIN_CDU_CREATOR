@@ -23,7 +23,7 @@
 """
 from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QDir, QSize, QDate, Qt, QByteArray
 from PyQt5.QtGui import QIcon, QPainter, QImage, QTextDocument, QTextDocumentWriter, QPen, QColor
-from PyQt5.QtWidgets import QAction, QFileDialog, QMessageBox, QProgressBar, QDialog, QCheckBox
+from PyQt5.QtWidgets import QAction, QFileDialog, QMessageBox, QProgressBar, QDialog, QCheckBox, QTabWidget
 from PyQt5.QtPrintSupport import QPrinter
 from PyQt5.QtXml import QDomDocument
 from qgis.core import *
@@ -92,9 +92,11 @@ class CduCreator:
         self.foglio_values = []
         self.sezione_values = []
         self.gruppoIndex = 0
+        self.algoritmoIndex = 0
         self.out_tempdir_s = ''
         self.lyr = ''
         self.group_names = []
+        self.algo_names = []
         self.cdu_path_folder = ''
         self.CduTitle = 'Certificato di Destinazione Urbanistica (CDU)'
         self.CduComune = ''
@@ -298,6 +300,7 @@ class CduCreator:
                 self.dlg.particellaComboBox.currentIndexChanged.connect(self.particellaBox)
                 self.dlg.particellaComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
                 self.dlg.gruppoComboBox.currentIndexChanged.connect(self.gruppoBox)
+                self.dlg.algoComboBox.currentIndexChanged.connect(self.algoritmoBox)
                 self.dlg.logoButton.clicked.connect(self.importLogo)
                 self.dlg.urlLogo.textChanged.connect(self.handleLogo)
                 self.dlg.txtButton.clicked.connect(self.importTxt)
@@ -345,8 +348,8 @@ class CduCreator:
                     map.setExtent(box)
                     map.refresh()
                         
-                    self.dlg.textLog.append(self.tr('ATTENZIONE: è già presente una selezione nel layer terreni_catastali.\nUlteriori selezioni utilizzando i menù a tendina saranno aggiunte a quella esistente.'))
-                    QCoreApplication.processEvents()
+                    #self.dlg.textLog.append(self.tr('ATTENZIONE: è già presente una selezione nel layer terreni_catastali.\nUlteriori selezioni utilizzando i menù a tendina saranno aggiunte a quella esistente.'))
+                    #QCoreApplication.processEvents()
                     
                 self.dlg.show()
             else:
@@ -683,6 +686,11 @@ class CduCreator:
         self.gruppoIndex = idxg
         #print(self.gruppoIndex)
         
+    def algoritmoBox(self, idxa):
+        #print('gruppo')
+        self.algoritmoIndex = idxa
+        print(self.algoritmoIndex)
+        
     def handleProtocollo(self, val):
         self.protocollo = val
         
@@ -803,6 +811,11 @@ class CduCreator:
         self.dlg.gruppoComboBox.addItem('')
         self.dlg.gruppoComboBox.addItems(gro for gro in self.group_names)
         
+        self.algo_names = ['QGIS - Ritaglia', 'GDAL - Ritaglia con maschera']
+        self.dlg.algoComboBox.clear()
+        #self.dlg.algoComboBox.addItem('')
+        self.dlg.algoComboBox.addItems(alg for alg in self.algo_names)
+        
         self.dlg.titolo.setText(self.CduTitle)
         
         
@@ -820,6 +833,7 @@ class CduCreator:
         self.dlg.sezioneComboBox.currentIndexChanged.disconnect(self.sezioneBox)
         self.dlg.particellaComboBox.currentIndexChanged.disconnect(self.particellaBox)
         self.dlg.gruppoComboBox.currentIndexChanged.disconnect(self.gruppoBox)
+        self.dlg.algoComboBox.currentIndexChanged.disconnect(self.algoritmoBox)
         self.dlg.logoButton.clicked.disconnect(self.importLogo)
         self.dlg.urlLogo.textChanged.disconnect(self.handleLogo)
         self.dlg.txtButton.clicked.disconnect(self.importTxt)
@@ -854,9 +868,11 @@ class CduCreator:
         self.foglio_values = []
         self.sezione_values = []
         self.gruppoIndex = 0
+        self.algoritmoIndex = 0
         self.out_tempdir_s = ''
         self.lyr = ''
         self.group_names = []
+        self.algo_names = []
         self.cdu_path_folder = ''
         self.CduTitle = 'Certificato di Destinazione Urbanistica (CDU)'
         self.CduComune = ''
@@ -889,6 +905,7 @@ class CduCreator:
     def run(self):
         #print(show_values_s)
         #print(self.sezioneIndex)
+        self.dlg.tabWidget.setCurrentIndex(2)
         
         if self.gruppoIndex == 0:
             self.dlg.textLog.append(self.tr('ATTENZIONE: nessun gruppo è stato selezionato, selezionare il gruppo contenete i dati urbanistici\n'))
@@ -902,8 +919,12 @@ class CduCreator:
             self.dlg.textLog.append(self.tr('ERRORE: la cartella {} non esiste\n'.format(self.cdu_path_folder)))
             return
             
-        self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\nPotrebbe richiedere un po\' di tempo a seconda del numero di particelle selezionate. Attendere la fine del processo.\n'))
+        self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\nPotrebbe richiedere un po\' di tempo a seconda del numero di particelle selezionate. Attendere la fine del processo.\n'))
         QCoreApplication.processEvents()
+        
+        if self.dlg.algoComboBox.currentIndex() == 1:
+            self.dlg.textLog.append(self.tr('ATTENZIONE: è stato scelto come algoritmo di intersezione "GDAL - Ritaglia con maschera".\nIl processo potrebbe richiedere un po\' più di tempo. Attendere la fine del processo.\n'))
+            QCoreApplication.processEvents()
             
         param_file = open(self.param_txt, "w")
         param_file.write(self.cdu_path_folder + '\n')
@@ -933,6 +954,11 @@ class CduCreator:
             #print (selectedGroupIndex)
             selectedGroup = self.group_names[selectedGroupIndex - 1]
             #print (selectedGroup)
+            
+            selectedAlgoIndex = self.dlg.algoComboBox.currentIndex()
+            #print (selectedAlgoIndex)
+            selectedAlgo = self.algo_names[selectedAlgoIndex]
+            #print (selectedAlgo)
             
             if self.lyr.selectedFeatureCount() > 0:
                 selectedF = self.lyr.selectedFeatures()
@@ -1065,9 +1091,14 @@ class CduCreator:
                     for key, value in layers_dict.items():
                         file_name = 'intersect_{}_{}.gpkg'.format(shp_count, vl.name())
                         try:
-                            processing.run("native:clip", {'INPUT': key,
-                                'OVERLAY': vl,
-                                'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
+                            if selectedAlgoIndex == 0:
+                                processing.run("native:clip", {'INPUT': key,
+                                    'OVERLAY': vl,
+                                    'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
+                            else:
+                                processing.run("gdal:clipvectorbypolygon", {'INPUT': key,
+                                    'MASK': vl,
+                                    'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
                         except:
                             self.dlg.textLog.append(self.tr('ATTENZIONE: sono stati riscontrati problemi nell\'intersezione fra la particella selezionata e il layer {}. Il CDU non verrà creato.\n'.format(layers_dict[key][1])))
                             QCoreApplication.processEvents()
