@@ -104,6 +104,7 @@ class CduCreator:
         self.checkAreaBox = False
         self.checkAreaPercBox = False
         self.root = ''
+        self.input_file_path = ''
         self.input_txt_path = ''
         self.cdu_file_name = ''
         self.protocollo = ''
@@ -299,6 +300,7 @@ class CduCreator:
                 self.dlg.sezioneComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
                 self.dlg.particellaComboBox.currentIndexChanged.connect(self.particellaBox)
                 self.dlg.particellaComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+                self.dlg.fileImportButton.clicked.connect(self.importFile)
                 self.dlg.gruppoComboBox.currentIndexChanged.connect(self.gruppoBox)
                 self.dlg.algoComboBox.currentIndexChanged.connect(self.algoritmoBox)
                 self.dlg.logoButton.clicked.connect(self.importLogo)
@@ -762,6 +764,56 @@ class CduCreator:
         self.input_logo_path = val
         print(self.input_logo_path)
         
+    def importFile(self):
+        self.input_file, _filter = QFileDialog.getOpenFileName(None, "Open ", '.', "(*.txt *.csv)")
+        self.input_file_path = QDir.toNativeSeparators(self.input_file)
+        if os.path.isfile(self.input_file_path):
+            #print('file exist')
+            if os.path.splitext(self.input_file_path)[1] == '.csv':
+                input_file_txt = open(self.input_file_path, "r")
+                next(input_file_txt)
+            elif os.path.splitext(self.input_file_path)[1] == '.txt':
+                input_file_txt = open(self.input_file_path, "r")
+            #print(file.read())
+            for num, line in enumerate(input_file_txt, 1):
+                if line.rstrip():
+                    line_list = list(line.split(','))
+                    print(line_list)
+                    if len(line_list) == 3:
+                        if line_list[1] == '' or line_list[1] == ' ' or line_list[2] == '' or line_list[2] == ' ':
+                            self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
+                        elif line_list[0] == '' or line_list[0] == ' ':
+                            self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
+                            self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {}'.format(line_list[1], line_list[2])))
+                        else:
+                            self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), line_list[0].strip(), self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
+                            self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {}'.format(line_list[0], line_list[1], line_list[2])))
+                    elif len(line_list) < 2:
+                        self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare almeno il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
+                    elif len(line_list) > 3:
+                        if line_list[3] == '' or line_list[3] == ' ' or line_list[3] == '\n':
+                            if line_list[1] == '' or line_list[1] == ' ' or line_list[2] == '' or line_list[2] == ' ':
+                                self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
+                            elif line_list[0] == '' or line_list[0] == ' ':
+                                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
+                                self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {}'.format(line_list[1], line_list[2])))
+                            else:
+                                self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), line_list[0].strip(), self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
+                                self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {}\n'.format(line_list[0], line_list[1], line_list[2])))
+                        else:
+                            self.dlg.textParticelle.append(self.tr('Errore alla riga {}, sono stati specificati troppi parametri. La riga sarà ignorata.\n'.format(num)))
+                    else:
+                        if line_list[0] == '' or line_list[0] == ' ' or line_list[1] == '' or line_list[1] == ' ':
+                            self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
+                        else:
+                            self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[0].strip(), self.map_list[0].casefold(), line_list[1].strip()), 1)
+                            self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {}'.format(line_list[0], line_list[1])))
+            input_file_txt.close()
+            box = self.lyr.boundingBoxOfSelected()
+            map = iface.mapCanvas()
+            map.setExtent(box)
+            map.refresh()
+
     def importTxt(self):
         self.input_txt, _filter = QFileDialog.getOpenFileName(None, "Open ", '.', "(*.txt)")
         self.input_txt_path = QDir.toNativeSeparators(self.input_txt)
@@ -832,6 +884,7 @@ class CduCreator:
         self.dlg.foglioComboBox.currentIndexChanged.disconnect(self.foglioBox)
         self.dlg.sezioneComboBox.currentIndexChanged.disconnect(self.sezioneBox)
         self.dlg.particellaComboBox.currentIndexChanged.disconnect(self.particellaBox)
+        self.dlg.fileImportButton.clicked.disconnect(self.importFile)
         self.dlg.gruppoComboBox.currentIndexChanged.disconnect(self.gruppoBox)
         self.dlg.algoComboBox.currentIndexChanged.disconnect(self.algoritmoBox)
         self.dlg.logoButton.clicked.disconnect(self.importLogo)
@@ -880,6 +933,7 @@ class CduCreator:
         self.checkAreaBox = False
         self.checkAreaPercBox = False
         self.root = ''
+        self.input_file_path = ''
         self.input_txt_path = ''
         self.cdu_file_name = ''
         self.protocollo = ''
@@ -917,8 +971,10 @@ class CduCreator:
             
         if os.path.isdir(self.cdu_path_folder) == False:
             self.dlg.textLog.append(self.tr('ERRORE: la cartella {} non esiste\n'.format(self.cdu_path_folder)))
-            return
-            
+            return
+
+            
+
         self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\nPotrebbe richiedere un po\' di tempo a seconda del numero di particelle selezionate. Attendere la fine del processo.\n'))
         QCoreApplication.processEvents()
         
