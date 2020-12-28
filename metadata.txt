@@ -10,7 +10,7 @@
 name=CDU Creator
 qgisMinimumVersion=3.0
 description=This plugin creates the .pdf file of CDU (Certificato di Destinazione Urbanistica).
-version=1.1
+version=1.2
 author=Roberta Fagandini (Gter srl) - Roberto Marzocchi (Gter srl)
 email=assistenzagis@gter.it
 
@@ -40,6 +40,8 @@ repository=https://github.com/gtergeomatica/cdu_creator
 
 # Uncomment the following line and add your changelog:
 changelog=
+    1.2
+        * Added the import file button in order to select the parcels listed in a txt or csv file
     1.1
         * New GUI
         * Added a dropdown menù to choose the intersection algorithm
