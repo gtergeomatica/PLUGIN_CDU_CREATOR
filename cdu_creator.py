@@ -645,8 +645,8 @@ class CduCreator:
                 testo = self.tr('Fog = {}, Map = {} '.format(sel_foglio, sel_particella))
             print(self.dlg.textParticelle.toPlainText())
             lines = self.dlg.textParticelle.toPlainText().split("\n")
-            print(lines)
-            print(testo)
+            #print(lines)
+            #print(testo)
             for i in lines:
                 if i == testo:
                     lines.remove(i)
@@ -780,7 +780,7 @@ class CduCreator:
             for num, line in enumerate(input_file_txt, 1):
                 if line.rstrip():
                     line_list = list(line.split(','))
-                    print(line_list)
+                    #print(line_list)
                     if len(line_list) == 3:
                         if line_list[1] == '' or line_list[1] == ' ' or line_list[2] == '' or line_list[2] == ' ' or line_list[2] == '\n':
                             self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
