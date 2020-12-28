@@ -643,8 +643,10 @@ class CduCreator:
                 #sel_foglio = selectedF[self.fog_list[0].casefold()]
                 #sel_particella = selectedF[self.map_list[0].casefold()]
                 testo = self.tr('Fog = {}, Map = {} '.format(sel_foglio, sel_particella))
+            print(self.dlg.textParticelle.toPlainText())
             lines = self.dlg.textParticelle.toPlainText().split("\n")
-            #print(lines)
+            print(lines)
+            print(testo)
             for i in lines:
                 if i == testo:
                     lines.remove(i)
@@ -780,14 +782,14 @@ class CduCreator:
                     line_list = list(line.split(','))
                     print(line_list)
                     if len(line_list) == 3:
-                        if line_list[1] == '' or line_list[1] == ' ' or line_list[2] == '' or line_list[2] == ' ':
+                        if line_list[1] == '' or line_list[1] == ' ' or line_list[2] == '' or line_list[2] == ' ' or line_list[2] == '\n':
                             self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
                         elif line_list[0] == '' or line_list[0] == ' ':
                             self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
-                            self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {}'.format(line_list[1], line_list[2])))
+                            self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(line_list[1].strip(), line_list[2].strip())))
                         else:
                             self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), line_list[0].strip(), self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
-                            self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {}'.format(line_list[0], line_list[1], line_list[2])))
+                            self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(line_list[0].strip(), line_list[1].strip(), line_list[2].strip())))
                     elif len(line_list) < 2:
                         self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare almeno il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
                     elif len(line_list) > 3:
@@ -796,10 +798,10 @@ class CduCreator:
                                 self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
                             elif line_list[0] == '' or line_list[0] == ' ':
                                 self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
-                                self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {}'.format(line_list[1], line_list[2])))
+                                self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(line_list[1].strip(), line_list[2].strip())))
                             else:
                                 self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), line_list[0].strip(), self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
-                                self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {}\n'.format(line_list[0], line_list[1], line_list[2])))
+                                self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(line_list[0].strip(), line_list[1].strip(), line_list[2].strip())))
                         else:
                             self.dlg.textParticelle.append(self.tr('Errore alla riga {}, sono stati specificati troppi parametri. La riga sarà ignorata.\n'.format(num)))
                     else:
@@ -807,7 +809,7 @@ class CduCreator:
                             self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
                         else:
                             self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[0].strip(), self.map_list[0].casefold(), line_list[1].strip()), 1)
-                            self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {}'.format(line_list[0], line_list[1])))
+                            self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(line_list[0].strip(), line_list[1].strip())))
             input_file_txt.close()
             box = self.lyr.boundingBoxOfSelected()
             map = iface.mapCanvas()
