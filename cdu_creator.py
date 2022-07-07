@@ -592,13 +592,13 @@ class CduCreator:
                 sel_sezione = self.sezione_values[self.sezioneIndex - 1]
                 #print('sel_sezione è {}'.format(sel_sezione))
                 if sel_sezione == 'NULL' or sel_sezione == '':
-                    self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 1)
+                    self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), self.lyr.AddToSelection)
                 else:
-                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 1)
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), self.lyr.AddToSelection)
                 self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(sel_sezione, sel_foglio, sel_particella)))
             else:
                 #print('sono in sezione == 0')
-                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 1)
+                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), self.lyr.AddToSelection)
                 selectedF = self.lyr.selectedFeatures()[0]
                 if self.lyr.fields().lookupField("SEZIONE") != -1:
                     sel_sezione = selectedF[self.sez_list[0].casefold()]
@@ -627,14 +627,14 @@ class CduCreator:
                 sel_sezione = self.sezione_values[self.sezioneIndex - 1]
                 #print('sel_sezione è {}'.format(sel_sezione))
                 if sel_sezione == 'NULL' or sel_sezione == '':
-                    self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 3)
+                    self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), self.lyr.RemoveFromSelection)
                 else:
                     #print('sono qui')
-                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 3)
+                    self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sel_sezione, self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), self.lyr.RemoveFromSelection)
                 testo = self.tr('Sez = {}, Fog = {}, Map = {} '.format(sel_sezione, sel_foglio, sel_particella))
             else:
                 #print('sono in sezione == 0')
-                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), 3)
+                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), sel_foglio, self.map_list[0].casefold(), sel_particella), self.lyr.RemoveFromSelection)
                 selectedF = self.lyr.selectedFeatures()[0]
                 if self.lyr.fields().lookupField("SEZIONE") != -1:
                     sel_sezione = selectedF[self.sez_list[0].casefold()]
@@ -785,10 +785,10 @@ class CduCreator:
                         if line_list[1] == '' or line_list[1] == ' ' or line_list[2] == '' or line_list[2] == ' ' or line_list[2] == '\n':
                             self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
                         elif line_list[0] == '' or line_list[0] == ' ':
-                            self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
+                            self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), self.lyr.AddToSelection)
                             self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(line_list[1].strip(), line_list[2].strip())))
                         else:
-                            self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), line_list[0].strip(), self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
+                            self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), line_list[0].strip(), self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), self.lyr.AddToSelection)
                             self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(line_list[0].strip(), line_list[1].strip(), line_list[2].strip())))
                     elif len(line_list) < 2:
                         self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare almeno il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
@@ -797,10 +797,10 @@ class CduCreator:
                             if line_list[1] == '' or line_list[1] == ' ' or line_list[2] == '' or line_list[2] == ' ':
                                 self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
                             elif line_list[0] == '' or line_list[0] == ' ':
-                                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
+                                self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), self.lyr.AddToSelection)
                                 self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(line_list[1].strip(), line_list[2].strip())))
                             else:
-                                self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), line_list[0].strip(), self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), 1)
+                                self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), line_list[0].strip(), self.fog_list[0].casefold(), line_list[1].strip(), self.map_list[0].casefold(), line_list[2].strip()), self.lyr.AddToSelection)
                                 self.dlg.textParticelle.append(self.tr('Sez = {}, Fog = {}, Map = {} \n'.format(line_list[0].strip(), line_list[1].strip(), line_list[2].strip())))
                         else:
                             self.dlg.textParticelle.append(self.tr('Errore alla riga {}, sono stati specificati troppi parametri. La riga sarà ignorata.\n'.format(num)))
@@ -808,7 +808,7 @@ class CduCreator:
                         if line_list[0] == '' or line_list[0] == ' ' or line_list[1] == '' or line_list[1] == ' ':
                             self.dlg.textParticelle.append(self.tr('Errore alla riga {}, è necessario specificare il numero di foglio e mappale. La riga sarà ignorata.\n'.format(num)))
                         else:
-                            self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[0].strip(), self.map_list[0].casefold(), line_list[1].strip()), 1)
+                            self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), line_list[0].strip(), self.map_list[0].casefold(), line_list[1].strip()), self.lyr.AddToSelection)
                             self.dlg.textParticelle.append(self.tr('Fog = {}, Map = {} \n'.format(line_list[0].strip(), line_list[1].strip())))
             input_file_txt.close()
             box = self.lyr.boundingBoxOfSelected()
@@ -1441,16 +1441,16 @@ class CduCreator:
             for k, sfm in enumerate(sez_sel_list):
                 if self.sezioneIndex != 0:
                     if sfm == 'NULL' or sfm == '' or sfm == NULL:
-                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
+                        self.lyr.selectByExpression("{} is NULL AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), self.lyr.AddToSelection)
                     else:
-                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sfm, self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
+                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sfm, self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), self.lyr.AddToSelection)
                 else:
                     if sfm == 'NULL' or sfm == '' or sfm == NULL:
                         print('sez null')
-                        self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
+                        self.lyr.selectByExpression("{}='{}' AND {}='{}'".format(self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), self.lyr.AddToSelection)
                     else:
                         #print('sez not null')
-                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sfm, self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), 1)
+                        self.lyr.selectByExpression("{}='{}' AND {}='{}' AND {}='{}'".format(self.sez_list[0].casefold(), sfm, self.fog_list[0].casefold(), fog_sel_list[k], self.map_list[0].casefold(), map_sel_list[k]), self.lyr.AddToSelection)
 
             #rimuove il gruppo temporaneo
             rm_group = self.root.findGroup('temp')
