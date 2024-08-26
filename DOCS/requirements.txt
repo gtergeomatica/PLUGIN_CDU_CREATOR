@@ -1,0 +1,2 @@
+git+https://github.com/italia/docs-italia-theme@bootstrap-italia
+sphinx_rtd_theme
