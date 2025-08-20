@@ -4,7 +4,7 @@ Your plugin CduCreator was created in:
     //192.168.2.15/progetti_convegni/PROGETTI/2019/10-19-CDU Plugin\cdu_creator
 
 Your QGIS plugin directory is located at:
-    C:/Users/roberta/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
+    C:/Users/user/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
 
 What's Next:
 
