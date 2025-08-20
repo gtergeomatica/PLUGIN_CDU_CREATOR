@@ -1354,7 +1354,7 @@ class CduCreator:
                 stringa += 'Lì, ' + self.data.toString( Qt.DefaultLocaleShortDate) + '</p>'
             stringa += '<h3 style="text-align:center">Il Responsabile del Servizio</h3>'
             if self.richiedente == '':
-                stringa += '<p>Vista la richiesta del _______________________________________________________________________ <br><br>'
+                stringa += '<p>Vista la richiesta del _________________________________________________________ <br><br>'
             else:
                 stringa += '<p>Vista la richiesta del <i>' + self.richiedente + ' </i>'
             if self.checkDataBox == False:
@@ -1413,8 +1413,21 @@ class CduCreator:
                 img.save(img_path_file)
                 
                 stringa += '<p style="text-align:center"><img src="' + img_path_file + '"></p>'
-            stringa += '<p style="text-align:center"> Il presente CDU è stato creato automaticamente in data {} alle ore {} utilizzando il plugin CDU Creator di QGIS.</p><br>'.format(datetime.now().strftime("%d-%m-%Y"), datetime.now().strftime("%H:%M:%S"))
-            stringa += '<p>Si rilascia la presente per gli usi consentiti dalla legge.</p><br><p style="text-align:right"> Il Responsabile del Servizio</p>'
+            stringa += (
+                '<p style="text-align:center"> Il presente CDU è stato creato automaticamente in data '
+                '{} alle ore {} utilizzando il plugin CDU Creator di QGIS.</p>'
+            ).format(datetime.now().strftime("%d-%m-%Y"), datetime.now().strftime("%H:%M:%S"))
+            stringa += '<h3 style="text-align:left">Nota legale</h3>'
+            stringa += (
+                '<p style="text-align:justify; font-size:10pt;">'
+                'Il presente certificato non può essere prodotto agli organi della Pubblica Amministrazione '
+                'o ai privati gestori di Pubblici Servizi '
+                '(<b>art. 15, legge 12 novembre 2011, n. 183</b>).<br>'
+                'Quanto sopra ai fini e per gli effetti dell’<b>art. 30, comma 2, DPR 380/2001</b>.<br>'
+                'Si rilascia la presente certificazione <i>per gli usi consentiti dalla legge</i>.'
+                '</p>'
+                '<p style="text-align:right">Il Responsabile del Servizio</p>'
+            )
             stringa += '</body></html>'
             doc = QTextDocument()
             doc.setHtml(stringa)
