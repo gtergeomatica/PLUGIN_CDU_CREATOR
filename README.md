@@ -62,7 +62,7 @@ Per maggiori dettagli e procedure passo-passo consultare il manuale.
 
 ## Documentazione
 
-📖 Il manuale d’uso del Plugin CDU Creator è disponibile al seguente link:
+📖 Il manuale d'uso del Plugin CDU Creator è disponibile al seguente link:
 👉 [Manuale CDU Creator](https://manuale-cdu-creator.readthedocs.io/it/latest/index.html)
 
 ## Supporto e segnalazioni
