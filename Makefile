@@ -1,5 +1,5 @@
 # Nome base del plugin
-PLUGIN_NAME = cdu_creator
+PLUGIN_NAME = cdu_creator-master
 PLUGIN_DIR = PLUGIN
 
 # Recupera la versione dal tag git (es. v1.3.1 -> v1.3.1)
