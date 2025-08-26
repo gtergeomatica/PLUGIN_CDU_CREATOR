@@ -6,7 +6,7 @@
 #		begin				: 2019-07-18
 #		git sha				: $Format:%H$
 #		copyright			: (C) 2019 by Gter srl
-#		email				: assistenzagis@gter.it
+#		email				: tecnico@gter.it
 # ***************************************************************************/
 #
 #/***************************************************************************
@@ -23,7 +23,7 @@
 #################################################
 
 
-#Add iso code for any locales you want to support here (space separated)
+# Add iso code for any locales you want to support here (space separated)
 # default is no locales
 # LOCALES = af
 LOCALES =
