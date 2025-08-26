@@ -71,4 +71,4 @@ Per segnalare errori, bug o proporre miglioramenti aprire una Issue su questa re
 [Issue Tracker](https://github.com/gtergeomatica/PLUGIN_CDU_CREATOR/issues)
 
 ## Licenza
-Il plugin è distribuito con [licenza GNU GPL v3](PLUGIN/LICENCE).
+Il plugin è distribuito con [licenza GNU GPL v3](PLUGIN/LICENSE).
