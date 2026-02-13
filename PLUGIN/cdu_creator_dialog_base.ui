@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>573</width>
-    <height>575</height>
+    <height>585</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -214,6 +214,25 @@
            </layout>
           </item>
          </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="IntcheckBox">
+         <property name="mouseTracking">
+          <bool>true</bool>
+         </property>
+         <property name="tabletTracking">
+          <bool>true</bool>
+         </property>
+         <property name="toolTip">
+          <string>Non vengono considerati i layer la cui area di intersezione con l’area di interesse è inferiore a 1 m².</string>
+         </property>
+         <property name="toolTipDuration">
+          <number>-1</number>
+         </property>
+         <property name="text">
+          <string>Applica una tolleranza di 1 m²</string>
+         </property>
         </widget>
        </item>
       </layout>

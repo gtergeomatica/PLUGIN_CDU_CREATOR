@@ -48,6 +48,16 @@ class CduCreatorDialogTest(unittest.TestCase):
         result = self.dialog.result()
         self.assertEqual(result, QDialog.Rejected)
 
+    def test_intcheckbox_exists_and_toggle(self):
+        """The dialog should expose `IntcheckBox` and allow toggling."""
+        # widget exists
+        self.assertTrue(hasattr(self.dialog, 'IntcheckBox'))
+        # default unchecked
+        self.assertFalse(self.dialog.IntcheckBox.isChecked())
+        # toggle
+        self.dialog.IntcheckBox.setChecked(True)
+        self.assertTrue(self.dialog.IntcheckBox.isChecked())
+
 if __name__ == "__main__":
     suite = unittest.makeSuite(CduCreatorDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)

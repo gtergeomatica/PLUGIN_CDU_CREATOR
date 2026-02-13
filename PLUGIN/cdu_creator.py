@@ -117,8 +117,8 @@ class CduCreator:
         self.catasto_alias = {}
         self.checkOdtBox = False
         self.checkMapBox = False 
+        self.checkIntBox = False # inserimento IntcheckBox per filtro intersezioni < 1 m²   
         
-
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -252,6 +252,8 @@ class CduCreator:
                 self.input_txt_path = param[6].strip()
                 self.checkAreaBox = param[7].strip()
                 self.checkAreaPercBox = param[8].strip()
+                # self.checkIntBox = param[9].strip() if len(param) > 9 else 'False' per evitare errori se il file non contiene il nuovo parametro 
+                self.checkIntBox = param[9].strip() if len(param) > 9 else 'False'  
                 self.dlg.OutFolder.setText(self.cdu_path_folder)
                 if self.checkOdtBox == 'True':
                     self.checkOdtBox = True
@@ -278,9 +280,15 @@ class CduCreator:
                 if self.checkAreaPercBox == 'True':
                     self.checkAreaPercBox = True
                     self.dlg.printAreaPercBox.setChecked(True)
+                # Imposta lo stato della variabile e della checkbox IntCheckBox in base al valore letto dal file di parametri
+                # Serve per mantenere la selezione del filtro "intersezioni < 1 m²" tra una sessione e l'altra
+                if self.checkIntBox == 'True':
+                     self.checkIntBox = True 
+                     self.dlg.IntcheckBox.setChecked(True)
                 else:
-                    self.checkAreaPercBox = False
-                    self.dlg.printAreaPercBox.setChecked(False)
+                    self.checkIntBox = False
+                    self.dlg.IntcheckBox.setChecked(False)
+                                       
                 param_file.close()
             else:
                 param_file = open(self.param_txt, "w+")
@@ -321,6 +329,7 @@ class CduCreator:
                 self.dlg.textParticelle.textChanged.connect(self.handleRemoveButton)
                 self.dlg.printAreaBox.stateChanged.connect(self.handleAreaBox)
                 self.dlg.printAreaPercBox.stateChanged.connect(self.handleAreaPercBox)
+                self.dlg.IntcheckBox.stateChanged.connect(self.handleIntCheck)
                 self.dlg.odtCheckBox.stateChanged.connect(self.handleOdtFile)
                 self.dlg.mapCheckBox.stateChanged.connect(self.handleMapFile)
                 self.dlg.addButton.clicked.connect(self.addMapButton)
@@ -836,7 +845,13 @@ class CduCreator:
             self.checkAreaPercBox = True
         else:
             self.checkAreaPercBox = False
-        
+    
+    def handleIntCheck(self):
+        if self.dlg.IntcheckBox.isChecked() == True:
+            self.checkIntBox = True
+        else:
+            self.checkIntBox = False
+
     def clearButton(self):
         self.dlg.textLog.clear()
         
@@ -904,6 +919,10 @@ class CduCreator:
         self.dlg.dateEdit.dateChanged.connect(self.handleData)
         self.dlg.printAreaBox.stateChanged.disconnect(self.handleAreaBox)
         self.dlg.printAreaPercBox.stateChanged.disconnect(self.handleAreaPercBox)
+        try:
+            self.dlg.IntcheckBox.stateChanged.disconnect(self.handleIntCheck)
+        except Exception:
+            pass
         self.dlg.odtCheckBox.stateChanged.disconnect(self.handleOdtFile)
         self.dlg.mapCheckBox.stateChanged.disconnect(self.handleMapFile)
         self.dlg.addButton.clicked.disconnect(self.addMapButton)
@@ -934,6 +953,7 @@ class CduCreator:
         self.input_logo_path = ''
         self.checkAreaBox = False
         self.checkAreaPercBox = False
+        self.checkIntBox = False
         self.root = ''
         self.input_file_path = ''
         self.input_txt_path = ''
@@ -948,11 +968,12 @@ class CduCreator:
         self.catasto_alias = {}
         self.checkOdtBox = False
         self.checkMapBox = False 
+        self.checkIntBox = False # modifica aggiunta sarah
         
         if self.out_tempdir_s != '':
             self.out_tempdir_s.cleanup()
 
-        self.out_tempdir_s = ''
+        self.out_tempdir_s = None
 
         from qgis.utils import reloadPlugin
         reloadPlugin("CduCreator")
@@ -976,7 +997,6 @@ class CduCreator:
             return
 
             
-
         self.dlg.textLog.setText(self.tr('INIZIO PROCESSO...\nPotrebbe richiedere un po\' di tempo a seconda del numero di particelle selezionate. Attendere la fine del processo.\n'))
         QCoreApplication.processEvents()
         
@@ -994,18 +1014,19 @@ class CduCreator:
         param_file.write(self.input_txt_path + '\n')
         param_file.write(str(self.checkAreaBox) + '\n')
         param_file.write(str(self.checkAreaPercBox) + '\n')
+        param_file.write(str(self.checkIntBox) + '\n')
         param_file.close()
 
         result = True
         # See if OK was pressed
         if result:
-            #print('sono in run')
-            if self.out_tempdir_s == '':
-                self.out_tempdir_s = tempfile.TemporaryDirectory()
-            else:
-                self.out_tempdir_s.cleanup()
-                self.out_tempdir_s = tempfile.TemporaryDirectory()
-            
+            # ensure previous tempdir is removed, then create a fresh one
+            if self.out_tempdir_s:
+                try:
+                    self.out_tempdir_s.cleanup()
+                except Exception:
+                    pass
+            self.out_tempdir_s = tempfile.TemporaryDirectory()
             out_tempdir = self.out_tempdir_s
                         
             selectedGroupIndex = self.dlg.gruppoComboBox.currentIndex()
@@ -1038,7 +1059,7 @@ class CduCreator:
             
             #salva le feat selezionate in uno shp, lo aggiunge al gruppo e cambia lo stile (per usarla nell'img)
             processing.run("native:saveselectedfeatures", { 'INPUT' : self.lyr, 
-                        'OUTPUT' : '{}/aoi.shp'.format(out_tempdir.name)})
+                        'OUTPUT' : '{}/aoi.shp'.format(out_tempdir.name) })
             aoi_pathfile = os.path.join(out_tempdir.name, 'aoi.shp')
             lyr_aoi = QgsVectorLayer(aoi_pathfile, 'aoi')
             QgsProject.instance().addMapLayers([lyr_aoi], False)
@@ -1055,7 +1076,9 @@ class CduCreator:
             temp_feat = []
             temp_feat_name = 0
             temp_dict = {}
-            dict_to_print = {}
+            temp_skipped_msgs = {}   # <-- raccolta messaggi da inserire nel CDU per particella
+            skipped_particelle = []  # <-- elenco unico di (foglio, mappale, sezione) interessate dallo skipdict_to_print = {}
+            dict_to_print = {}      # <-- corregge NameError: inizializza il contenitore usato dopo
             msg_nome_check = 0
             msg_descr_check = 0
             msg_rif_check = 0
@@ -1096,6 +1119,7 @@ class CduCreator:
                 new_group_lyr.insertLayer(-1, vl)
                 
                 for fl_feat in vl.getFeatures():
+                    # calcola area della particella selezionata in m² (CRS sempre proiettato)
                     area_sel = fl_feat.geometry().area()
                 temp_feat_name += 1
                 
@@ -1165,6 +1189,13 @@ class CduCreator:
                                 for child in rm_group.children():
                                     QgsProject.instance().removeMapLayer(child.layerId())
                                 self.root.removeChildNode(rm_group)
+                            # assicurati di pulire la directory temporanea prima di uscire
+                            try:
+                                if self.out_tempdir_s:
+                                    self.out_tempdir_s.cleanup()
+                            except Exception:
+                                pass
+                            self.out_tempdir_s = None
                             map.refresh()
                             return
 
@@ -1206,13 +1237,23 @@ class CduCreator:
                         sel_lyr_int = QgsProject.instance().mapLayersByName(layers_dict[key][2])
                         
                         
+                        # per il filtro: conteggio geometrie ignorate
+                        skipped_small = 0
+                        skipped_details = []  # raccolta dettagliata per il log
                         for fl in sel_lyr_int[0].getFeatures():
                             if sel_lyr_int[0].featureCount() > 0:
-                                #print('ci sono features')
-                                #print('il num di feat è: {}'.format(sel_lyr_int[0].featureCount()))
                                 unique_id = layers_dict[key][2] + '_' + str(fl.id())
+                                # calcola area di intersezione in m² (compatibile con più versioni di QGIS)
                                 area = fl.geometry().area()
-                                area_perc = area * 100 / area_sel
+                                # filtro richiesto: ignora intersezioni < 1 m² se checkbox attiva
+                                if self.checkIntBox and area < 1.0:
+                                    skipped_small += 1
+                                    # salva dettaglio: (layer-nome, fid, area, foglio, mappale, sezione)
+                                    skipped_details.append(
+                                        (layers_dict[key][1], fl.id(), area, sel_foglio, sel_particella, sel_sezione)
+                                    )
+                                    continue
+                                area_perc = (area * 100 / area_sel) 
                                 if descr_check == 1:
                                     descr = '- Descrizione: {}'.format(fl[descr_list[0]])
                                     if fl[descr_list[0]] == NULL:
@@ -1238,9 +1279,9 @@ class CduCreator:
                                 else:
                                     rif_nto = '- Articolo: -'
                                 if area < 0.5:
-                                    area_tot = '- Area intersecata (m<sup>2</sup>): {}'.format(area)
+                                    area_tot = '- Area intersecata (m<sup>2</sup>): {:,.3f}'.format(area).replace(",", ".")
                                 else:
-                                    area_tot = '- Area intersecata (m<sup>2</sup>): {}'.format(round(area))
+                                    area_tot = '- Area intersecata (m<sup>2</sup>): {:,.0f}'.format(area).replace(",", ".")
                                 if area_perc < 0.5:
                                     area_tot_perc = '- Area intersecata (%): {}'.format(round(area_perc, 3))
                                 else:
@@ -1254,24 +1295,37 @@ class CduCreator:
                                     temp_dict[stringa_cat] = print_dict
                                     check_double += 1
                                 check_feat += 1
-
-                        if nome_check == 0 and msg_nome_check == 0:
-                            self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Nome" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
+                        if skipped_small > 0:
+                            # messaggio riepilogativo + dettaglio per geometria
+                            self.dlg.textLog.append(self.tr(
+                                'ATTENZIONE: {} geometrie con area intersecata < 1 m² ignorate nel layer {}.\n'
+                                .format(skipped_small, layers_dict[key][1])
+                            ))
+                            # crea snippet HTML da inserire nel CDU (riferimento alla particella)
+                            note_html = (
+                                '<p style="font-size:9pt; color:#555;">'
+                                '<b>Nota informativa</b><br>'
+                                'Si informa che, ai fini della redazione del presente documento, '
+                                'per motivi di validità topologica delle geometrie, non sono state considerate '
+                                'le aree che intersecano l’area di interesse con superficie inferiore a 1 m<sup>2</sup> '
+                                '(riferimento: Foglio <b>{}</b>, Mappale <b>{}</b>).'
+                                '</p>'
+                            ).format(sel_foglio, sel_particella)
+                            # salva il messaggio associato alla stringa_cat corrente
+                            temp_skipped_msgs[stringa_cat] = note_html
+                            # registra la particella (evita duplicati)
+                            part_key = (str(sel_foglio), str(sel_particella), None if sel_sezione in (None, 'NULL', '') else str(sel_sezione))
+                            if part_key not in skipped_particelle:
+                                skipped_particelle.append(part_key)
+                            # dettaglio nel log (come già fatto)
+                            for lay_name, fid, a, fog, mapp, sez in skipped_details:
+                                a_fmt = round(a, 3) if a < 1 else int(round(a))
+                                sez_txt = '' if (sez == 'NULL' or sez == '' or sez is None) else f', Sez. {sez}'
+                                self.dlg.textLog.append(self.tr(
+                                    " - {}: fid={} (area {} m²) — Foglio {}, Mappale {}{}\n"
+                                    .format(lay_name, fid, a_fmt, fog, mapp, sez_txt)
+                                ))
                             QCoreApplication.processEvents()
-                            msg_nome_check += 1
-                        if descr_check == 0 and msg_descr_check == 0:
-                            self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Descrizione" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
-                            QCoreApplication.processEvents()
-                            msg_descr_check += 1
-                        if rif_check == 0 and msg_rif_check == 0:
-                            self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Riferimento legislativo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
-                            QCoreApplication.processEvents()
-                            msg_rif_check += 1
-                        if art_check == 0 and msg_art_check == 0:
-                            self.dlg.textLog.append(self.tr('ATTENZIONE: la colonna "Articolo" non è stata trovata nel layer {}.\n'.format(layers_dict[key][1])))
-                            QCoreApplication.processEvents()
-                            msg_art_check += 1
-
                     #check su eventuali particelle che non intersecano nulla ma per cui il clip genera comunque un layer senza features
                     if check_feat == 0:
                         if sel_sezione == 'NULL' or sel_sezione == '' or sel_sezione == '-' or sel_sezione == NULL:
@@ -1417,7 +1471,25 @@ class CduCreator:
                 '<p style="text-align:center"> Il presente CDU è stato creato automaticamente in data '
                 '{} alle ore {} utilizzando il plugin CDU Creator di QGIS.</p>'
             ).format(datetime.now().strftime("%d-%m-%Y"), datetime.now().strftime("%H:%M:%S"))
-            stringa += '<h3 style="text-align:left">Nota legale</h3>'
+            # se esistono particelle con intersezioni < 1 m² scartate, inserisci avviso riassuntivo
+            if skipped_particelle:
+                parts = []
+                for fog, mapp, sez in skipped_particelle:
+                    if sez and sez not in ('NULL', ''):
+                        parts.append(self.tr('Sez. {0}, Foglio {1}, Mappale {2}').format(sez, fog, mapp))
+                    else:
+                        parts.append(self.tr('Foglio {0}, Mappale {1}').format(fog, mapp))
+                elenco = '; '.join(parts)
+                note_html_template = (
+                    '<p style="font-size:9pt; color:#555;">'
+                    '<b>Nota informativa</b><br>'
+                    'Si informa che, ai fini della redazione del presente documento, '
+                    'per motivi di validità topologica delle geometrie, non sono state considerate le aree che '
+                    'intersecano l’area di interesse con superficie inferiore a 1 m<sup>2</sup> '
+                    '(riferimento: {})</p>'
+                )
+                stringa += self.tr(note_html_template).format(elenco)
+            stringa += '<h3 style="text:left">Nota legale</h3>'
             stringa += (
                 '<p style="text-align:justify; font-size:10pt;">'
                 'Il presente certificato non può essere prodotto agli organi della Pubblica Amministrazione '
@@ -1472,6 +1544,12 @@ class CduCreator:
                     QgsProject.instance().removeMapLayer(child.layerId())
                 self.root.removeChildNode(rm_group)
             map.refresh()
-
+            # pulizia sicura della cartella temporanea usata dal run()
+            try:
+                if self.out_tempdir_s:
+                    self.out_tempdir_s.cleanup()
+            except Exception:
+                pass
+                self.out_tempdir_s = None
             self.dlg.textLog.append(self.tr('PROCESSO TERMINATO...\n'))
             QCoreApplication.processEvents()
