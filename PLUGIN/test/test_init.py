@@ -8,6 +8,7 @@ __license__ = "GPL"
 __copyright__ = 'Copyright 2012, Australia Indonesia Facility for '
 __copyright__ += 'Disaster Reduction'
 
+from email.mime import message
 import os
 import unittest
 import logging
@@ -51,7 +52,8 @@ class TestInit(unittest.TestCase):
         parser.optionxform = str
         parser.read(file_path)
         message = 'Cannot find a section named "general" in %s' % file_path
-        assert parser.has_section('general'), message
+        if not parser.has_section('general'):
+            raise AssertionError(message)
         metadata.extend(parser.items('general'))
 
         for expectation in required_metadata:

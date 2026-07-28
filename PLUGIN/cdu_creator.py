@@ -21,11 +21,12 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QDir, QSize, QDate, Qt, QByteArray
-from PyQt5.QtGui import QIcon, QPainter, QImage, QTextDocument, QTextDocumentWriter, QPen, QColor
-from PyQt5.QtWidgets import QAction, QFileDialog, QMessageBox, QProgressBar, QDialog, QCheckBox, QTabWidget, QListWidgetItem
-from PyQt5.QtPrintSupport import QPrinter
-from PyQt5.QtXml import QDomDocument
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QDir, QSize, QDate, Qt, QByteArray
+from qgis.PyQt.QtGui import QIcon, QPainter, QImage, QTextDocument, QTextDocumentWriter, QPen, QColor
+from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox, QProgressBar, QDialog, QCheckBox, QTabWidget, QListWidgetItem
+from qgis.PyQt.QtPrintSupport import QPrinter
+from qgis.PyQt.QtXml import QDomDocument
+from qgis.PyQt import sip
 from qgis.core import *
 from qgis.core import QgsMapLayerProxyModel
 from qgis.utils import *
@@ -304,11 +305,11 @@ class CduCreator:
                 self.dlg.clearSelButton.clicked.connect(self.clearSelButton)
                 self.dlg.helpButton.clicked.connect(self.openHelpButton)
                 self.dlg.foglioComboBox.currentIndexChanged.connect(self.foglioBox)
-                self.dlg.foglioComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+                self.dlg.foglioComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
                 self.dlg.sezioneComboBox.currentIndexChanged.connect(self.sezioneBox)
-                self.dlg.sezioneComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+                self.dlg.sezioneComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
                 self.dlg.particellaComboBox.currentIndexChanged.connect(self.particellaBox)
-                self.dlg.particellaComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+                self.dlg.particellaComboBox.view().setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
                 self.dlg.fileImportButton.clicked.connect(self.importFile)
                 self.dlg.gruppoComboBox.currentIndexChanged.connect(self.gruppoBox)
                 self.dlg.algoComboBox.currentIndexChanged.connect(self.algoritmoBox)
@@ -386,7 +387,7 @@ class CduCreator:
 
                 self.prepRun()
             else:
-                self.iface.messageBar().pushMessage("ATTENZIONE", "Il layer terreni_catastali non è caricato nel progetto.", level=Qgis.Critical, duration=4)
+                self.iface.messageBar().pushMessage("ATTENZIONE", "Il layer terreni_catastali non è caricato nel progetto.", level=Qgis.MessageLevel.Critical, duration=4)
                 self.pluginIsActive = False
         else:
             self.dlg.show()
@@ -971,10 +972,7 @@ class CduCreator:
         self.dlg.dateEdit.dateChanged.disconnect(self.handleData)
         self.dlg.printAreaBox.stateChanged.disconnect(self.handleAreaBox)
         self.dlg.printAreaPercBox.stateChanged.disconnect(self.handleAreaPercBox)
-        try:
-            self.dlg.IntcheckBox.stateChanged.disconnect(self.handleIntCheck)
-        except Exception:
-            pass
+        self.dlg.IntcheckBox.stateChanged.disconnect(self.gestisci_visibilita_lista)
         self.dlg.odtCheckBox.stateChanged.disconnect(self.handleOdtFile)
         self.dlg.mapCheckBox.stateChanged.disconnect(self.handleMapFile)
         self.dlg.addButton.clicked.disconnect(self.addMapButton)
@@ -1091,11 +1089,13 @@ class CduCreator:
         # See if OK was pressed
         if result:
             # ensure previous tempdir is removed, then create a fresh one
-            if self.out_tempdir_s:
+            if self.out_tempdir_s and os.path.isdir(self.out_tempdir_s.name):
                 try:
                     self.out_tempdir_s.cleanup()
-                except Exception:
-                    pass
+                except OSError as e:
+                    QgsMessageLog.logMessage(
+                        'Impossibile rimuovere la cartella temporanea {}: {}'.format(self.out_tempdir_s.name, e),
+                        'CduCreator', Qgis.MessageLevel.Warning)
             self.out_tempdir_s = tempfile.TemporaryDirectory()
             out_tempdir = self.out_tempdir_s
                         
@@ -1159,7 +1159,7 @@ class CduCreator:
             layer_spuntati_tolleranza = []
             for row in range(self.dlg.listWidgettolerance.count()):
                 list_item = self.dlg.listWidgettolerance.item(row)
-                if list_item.checkState() == Qt.Checked:
+                if list_item.checkState() == Qt.CheckState.Checked:
                     layer_spuntati_tolleranza.append(list_item.text())
 
             # SE QUALCOSA HA TRASFORMATO IL LAYER IN TESTO, LO RIPRENDE DA QGIS PRIMA DEL FOR
@@ -1287,11 +1287,13 @@ class CduCreator:
                                     QgsProject.instance().removeMapLayer(child.layerId())
                                 self.root.removeChildNode(rm_group)
                             # assicurati di pulire la directory temporanea prima di uscire
-                            try:
-                                if self.out_tempdir_s:
+                            if self.out_tempdir_s and os.path.isdir(self.out_tempdir_s.name):
+                                try:
                                     self.out_tempdir_s.cleanup()
-                            except Exception:
-                                pass
+                                except OSError as e:
+                                    QgsMessageLog.logMessage(
+                                        'Impossibile rimuovere la cartella temporanea {}: {}'.format(self.out_tempdir_s.name, e),
+                                        'CduCreator', Qgis.MessageLevel.Warning)
                             self.out_tempdir_s = None
                             map.refresh()
                             return
@@ -1356,7 +1358,7 @@ class CduCreator:
                                 layer_spuntati_tolleranza = []
                                 for row in range(self.dlg.listWidgettolerance.count()):
                                     list_item = self.dlg.listWidgettolerance.item(row)
-                                    if list_item.checkState() == Qt.Checked:
+                                    if list_item.checkState() == Qt.CheckState.Checked:
                                         layer_spuntati_tolleranza.append(list_item.text())
                                 
                                 # Filtra < 1.0 mq se la spunta è attiva E il layer corrente è tra quelli spuntati nella lista
@@ -1563,7 +1565,7 @@ class CduCreator:
             printer.setPageSize(QPrinter.A4)
             #printer.setPageMargins(10, 10, 10, 10, QPrinter.Millimeter)
             printer.setFullPage(True)
-            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
             if self.cdu_file_name == '':
                 cdu_pdf_name = 'cdu_{}.pdf'.format(datetime.now().strftime("%d%m%Y_%H%M%S"))
             else:
@@ -1628,7 +1630,7 @@ class CduCreator:
 
             if self.checkMapBox == True:
                 #crea immagine della mappa centrata sull'area di interesse
-                img = QImage(QSize(500, 500), QImage.Format_ARGB32_Premultiplied)
+                img = QImage(QSize(500, 500), QImage.Format.Format_ARGB32_Premultiplied)
 
                 settings = QgsMapSettings()
                 img_layers = QgsProject.instance().mapLayersByName('terreni_catastali')
@@ -1673,7 +1675,7 @@ class CduCreator:
                 layer_selezionati = []
                 for row in range(self.dlg.listWidgettolerance.count()):
                     list_item = self.dlg.listWidgettolerance.item(row)
-                    if list_item.checkState() == Qt.Checked:
+                    if list_item.checkState() == Qt.CheckState.Checked:
                         layer_selezionati.append(list_item.text())
                 layer_name_specifico = ", ".join(layer_selezionati)
                 # Se per assurdo non trova spunte, mette una dicitura di sicurezza
@@ -1829,15 +1831,18 @@ class CduCreator:
                                     printer_fronte = QPrinter()
                                     printer_fronte.setPageSize(QPrinter.A4)
                                     printer_fronte.setFullPage(True)
-                                    printer_fronte.setOutputFormat(QPrinter.PdfFormat)
+                                    printer_fronte.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
                                     printer_fronte.setOutputFileName(path_fronte_temp)
                                     doc_allegato.print(printer_fronte)
                                     
                                     # CARICA LA PAGINA GENERATA E LA INSERISCE NEL CODA
                                     reader_fronte = PdfReader(path_fronte_temp)
                                     writer_finale.add_page(reader_fronte.pages[0])
-                                except Exception:
-                                    pass
+                                except (OSError, IndexError) as e:
+                                    self.dlg.textLog.append(self.tr(
+                                        "ATTENZIONE: impossibile generare il frontespizio per l'Articolo {}: {}\n".format(art_num, e)
+                                    ))
+                                    QCoreApplication.processEvents()
 
                                 # Estrazione e accodamento delle pagine dal PDF delle NTA
                                 for p_idx in range(pag_inizio, pag_fine):
@@ -1896,29 +1901,30 @@ class CduCreator:
                         for child in rm_group_sicuro.children():
                             QgsProject.instance().removeMapLayer(child.layerId())
                         root_sicuro.removeChildNode(rm_group_sicuro)
-                except Exception:
-                    pass
+                except (RuntimeError, AttributeError) as e:
+                    QgsMessageLog.logMessage(
+                        'Pulizia di emergenza del gruppo "temp" non riuscita: {}'.format(e),
+                        'CduCreator', Qgis.MessageLevel.Warning)
 
             # REFRESH DELLA MAPPA AL RIPARO DA CRASH
-            try:
-                iface.mapCanvas().refresh()
-            except Exception:
-                pass
+            canvas = iface.mapCanvas()
+            if canvas is not None and not sip.isdeleted(canvas):
+               canvas.refresh()
 
             # PULIZIA FINALE DELLE CARTELLE TEMPORANEE
-            try:
-                if self.out_tempdir_s:
+            if self.out_tempdir_s and os.path.isdir(self.out_tempdir_s.name):
+                try:
                     self.out_tempdir_s.cleanup()
-            except Exception:
-                pass
+                except OSError as e:
+                    QgsMessageLog.logMessage(
+                        'Impossibile rimuovere la cartella temporanea {}: {}'.format(self.out_tempdir_s.name, e),
+                        'CduCreator', Qgis.MessageLevel.Warning)
             self.out_tempdir_s = None
 
             # AGGIORNAMENTO DEL LOG SOLO SE LA FINESTRA È ANCORA VIVA
-            try:
+            if self.dlg is not None and not sip.isdeleted(self.dlg):
                 self.dlg.textLog.append(self.tr('PROCESSO TERMINATO...\n'))
                 QCoreApplication.processEvents()
-            except Exception:
-                pass
 
     def gestisci_visibilita_lista(self):
         """Nasconde o mostra il riquadro della lista dei layer con i quadratini"""
@@ -1945,10 +1951,10 @@ class CduCreator:
         if group_node:
             for child in group_node.children():
                 # Controlla se  è effettivamente un layer (e non un sottogruppo)
-                if child.nodeType() == QgsLayerTreeNode.NodeLayer:
+                if child.nodeType() == QgsLayerTreeNode.NodeType.NodeLayer:
                     item = QListWidgetItem(child.name())
-                    item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-                    item.setCheckState(Qt.Unchecked) # Parte non spuntato di default
+                    item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                    item.setCheckState(Qt.CheckState.Unchecked) # Parte non spuntato di default
                     self.dlg.listWidgettolerance.addItem(item)
         else:
             # Se ancora non lo trova, fcerca tra tutti i gruppi esistenti
@@ -1956,10 +1962,10 @@ class CduCreator:
             for g in all_groups:
                 if g.name() == gruppo_selezionato:
                     for child in g.children():
-                        if child.nodeType() == QgsLayerTreeNode.NodeLayer:
+                        if child.nodeType() == QgsLayerTreeNode.NodeType.NodeLayer:
                             item = QListWidgetItem(child.name())
-                            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-                            item.setCheckState(Qt.Unchecked)
+                            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                            item.setCheckState(Qt.CheckState.Unchecked)
                             self.dlg.listWidgettolerance.addItem(item)
                     break
 
@@ -1970,7 +1976,7 @@ class CduCreator:
         """Mostra il pop-up con le indicazioni quando l'utente attiva la spunta NTA"""
         if self.dlg.IntcheckBox_2.isChecked():
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
+            msg.setIcon(QMessageBox.Icon.Information)
             msg.setWindowTitle("Istruzioni Estratto NTA")
             msg.setText("<b>Estrazione automatica NTA attiva</b>")
             msg.setInformativeText(
@@ -1980,5 +1986,5 @@ class CduCreator:
                 "Se il file manca, il percorso è errato o il documento non contiene testo leggibile, "
                 "il CDU standard verrà comunque generato con successo."
             )
-            msg.setStandardButtons(QMessageBox.Ok)
-            msg.exec_()
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
