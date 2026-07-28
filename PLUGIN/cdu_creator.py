@@ -27,12 +27,25 @@ from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox, QProgressBar,
 from qgis.PyQt.QtPrintSupport import QPrinter
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt import sip
-from qgis.core import *
-from qgis.core import QgsMapLayerProxyModel
-from qgis.utils import *
+from qgis.core import (
+    NULL,
+    Qgis,
+    QgsFillSymbol,
+    QgsLayerTreeGroup,
+    QgsLayerTreeLayer,
+    QgsLayerTreeNode,
+    QgsMapLayerProxyModel,
+    QgsMapRendererCustomPainterJob,
+    QgsMapSettings,
+    QgsMessageLog,
+    QgsProject,
+    QgsRectangle,
+    QgsVectorLayer,
+)
+from qgis.utils import iface
 import processing
 # Initialize Qt resources from file resources.py
-from .resources import *
+from . import resources  # noqa: F401
 # Import the code for the dialog
 from .cdu_creator_dialog import CduCreatorDialog
 import os.path
@@ -347,7 +360,7 @@ class CduCreator:
                 self.dlg.IntcheckBox_2.stateChanged.connect(self.gestisci_stato_nta)
                 self.gestisci_stato_nta()
 
-                if self.checkIntBox == True:
+                if self.checkIntBox:
                     self.dlg.listWidgettolerance.setVisible(True)
                     self.popola_lista_layer_tolleranza()
                 else:
@@ -461,7 +474,7 @@ class CduCreator:
                 #print (self.filter_s)
                 if self.filter_s == 'NULL':
                     print('is null')
-                    values_s = [feat_s[self.fog_list[0].casefold()] for feat_s in self.lyr.getFeatures() if feat_s[self.sez_list[0].casefold()] == None]
+                    values_s = [feat_s[self.fog_list[0].casefold()] for feat_s in self.lyr.getFeatures() if feat_s[self.sez_list[0].casefold()] is None]
                 else:
                     print('is not null')
                     values_s = [feat_s[self.fog_list[0].casefold()] for feat_s in self.lyr.getFeatures() if feat_s[self.sez_list[0].casefold()] == self.filter_s]
@@ -526,7 +539,7 @@ class CduCreator:
             filter = self.dlg.foglioComboBox.currentText()
             #print (self.filter_s)
             if self.filter_s == 'NULL':
-                values = [feat[self.map_list[0].casefold()] for feat in self.lyr.getFeatures() if feat[self.fog_list[0].casefold()] == filter if feat[self.sez_list[0].casefold()] == None]
+                values = [feat[self.map_list[0].casefold()] for feat in self.lyr.getFeatures() if feat[self.fog_list[0].casefold()] == filter if feat[self.sez_list[0].casefold()] is None]
             else:
                 values = [feat[self.map_list[0].casefold()] for feat in self.lyr.getFeatures() if feat[self.fog_list[0].casefold()] == filter if feat[self.sez_list[0].casefold()] == self.filter_s]
             list_val = set(values)
@@ -734,7 +747,7 @@ class CduCreator:
         self.richiedente = val
         
     def handleDataCheck(self):
-        if self.dlg.DataCheckBox.isChecked() == True:
+        if self.dlg.DataCheckBox.isChecked():
             self.checkDataBox = True
             self.dlg.label_11.setEnabled(True)
             self.dlg.dateEdit.setEnabled(True)
@@ -767,13 +780,13 @@ class CduCreator:
         self.cdu_file_name = val
         
     def handleOdtFile(self):
-        if self.dlg.odtCheckBox.isChecked() == True:
+        if self.dlg.odtCheckBox.isChecked():
             self.checkOdtBox = True
         else:
             self.checkOdtBox = False
             
     def handleMapFile(self):
-        if self.dlg.mapCheckBox.isChecked() == True:
+        if self.dlg.mapCheckBox.isChecked():
             self.checkMapBox = True
         else:
             self.checkMapBox = False
@@ -881,19 +894,19 @@ class CduCreator:
             self.dlg.ntaurlTxt.clear()
 
     def handleAreaBox(self):
-        if self.dlg.printAreaBox.isChecked() == True:
+        if self.dlg.printAreaBox.isChecked():
             self.checkAreaBox = True
         else:
             self.checkAreaBox = False
             
     def handleAreaPercBox(self):
-        if self.dlg.printAreaPercBox.isChecked() == True:
+        if self.dlg.printAreaPercBox.isChecked():
             self.checkAreaPercBox = True
         else:
             self.checkAreaPercBox = False
     
     def handleIntCheck(self):
-        if self.dlg.IntcheckBox.isChecked() == True:
+        if self.dlg.IntcheckBox.isChecked():
             self.checkIntBox = True
         else:
             self.checkIntBox = False
@@ -1060,7 +1073,7 @@ class CduCreator:
             self.dlg.textLog.append(self.tr('ERRORE: nessuna cartella di output è stata selezionata\n'))
             return
             
-        if os.path.isdir(self.cdu_path_folder) == False:
+        if not os.path.isdir(self.cdu_path_folder):
             self.dlg.textLog.append(self.tr('ERRORE: la cartella {} non esiste\n'.format(self.cdu_path_folder)))
             return
 
@@ -1242,19 +1255,19 @@ class CduCreator:
                                     subgr_name.append('')
                                     lyrs.append(gr)
                             g = 0
-                            for l in lyrs:
+                            for lyr_item in lyrs:
                                 #print(lyr.name())
                                 #print(lyr.layerId())
-                                processing.run("native:selectbylocation", {'INPUT': l.layer(),
+                                processing.run("native:selectbylocation", {'INPUT': lyr_item.layer(),
                                         'PREDICATE': [0],
                                         'INTERSECT': vl,
                                         'METHOD': 0})
-                                if l.layer().selectedFeatureCount() > 0:
+                                if lyr_item.layer().selectedFeatureCount() > 0:
                                     #print('{} interseca {}'.format(vl.name(), l.name()))
-                                    layers.append(l.layer())
-                                    layers_name.append(l.name())
+                                    layers.append(lyr_item.layer())
+                                    layers_name.append(lyr_item.name())
                                     layers_dict[layers[-1]] = (subgr_name[g], layers_name[-1])
-                                    l.layer().removeSelection()
+                                    lyr_item.layer().removeSelection()
                                 g += 1
                 
                 
@@ -1278,7 +1291,7 @@ class CduCreator:
                                 processing.run("gdal:clipvectorbypolygon", {'INPUT': key,
                                     'MASK': vl,
                                     'OUTPUT': '{}/{}'.format(out_tempdir.name, file_name)})
-                        except:
+                        except Exception:
                             self.dlg.textLog.append(self.tr('ATTENZIONE: sono stati riscontrati problemi nell\'intersezione fra la particella selezionata e il layer {}. Il CDU non verrà creato.\n'.format(layers_dict[key][1])))
                             QCoreApplication.processEvents()
                             rm_group = self.root.findGroup('temp')
@@ -1450,7 +1463,7 @@ class CduCreator:
                                 sbgr_lyr = '{}'.format(layers_dict[key][1])
                                 
                             print_dict[unique_id] = (sbgr_lyr, nome, descr, rif_leg, rif_nto, area_tot, area_tot_perc)
-                            if not stringa_cat in temp_dict.keys():
+                            if stringa_cat not in temp_dict.keys():
                                 temp_dict[stringa_cat] = print_dict
                                 check_double += 1
                             check_feat += 1
@@ -1496,7 +1509,7 @@ class CduCreator:
                             self.dlg.textLog.append(self.tr('ATTENZIONE: è stata trovata un\'altra particella con foglio {} e mappale {}. Non verrà stampata nel CDU. Verificare il layer terreni_catastali.\n'.format(sel_foglio, sel_particella)))
                             QCoreApplication.processEvents()
                         else:
-                            self.dlg.textLog.append(self.tr('ATTENZIONE: è stata trovata un\'altra particella con sezione {}, foglio {} e mappale {}. Non verrà stampata nel CDU. Verificare il layer terreni_catastali.\n'.format(sel_sezione, sel_foglio, lab_sezione)))
+                            self.dlg.textLog.append(self.tr('ATTENZIONE: è stata trovata un\'altra particella con sezione {}, foglio {} e mappale {}. Non verrà stampata nel CDU. Verificare il layer terreni_catastali.\n'.format(sel_sezione, sel_foglio, sel_particella)))
                             QCoreApplication.processEvents()
 
                     for key_td, value_td in temp_dict.items():
@@ -1593,7 +1606,7 @@ class CduCreator:
                 stringa += '<p>Prot. n°<br>'
             else:
                 stringa += '<p>Prot. n° ' + self.protocollo + '<br>'
-            if self.checkDataBox == False:
+            if not self.checkDataBox:
                 stringa += 'Lì, </p>'
             else:
                 stringa += 'Lì, ' + self.data.toString( Qt.DefaultLocaleShortDate) + '</p>'
@@ -1602,7 +1615,7 @@ class CduCreator:
                 stringa += '<p>Vista la richiesta del _________________________________________________________ <br><br>'
             else:
                 stringa += '<p>Vista la richiesta del <i>' + self.richiedente + ' </i>'
-            if self.checkDataBox == False:
+            if not self.checkDataBox:
                 stringa += 'presentata in data ____/____/____ '
             else:
                 stringa += 'presentata in data <i>' + self.data.toString( Qt.DefaultLocaleShortDate) + '  </i>'
@@ -1628,7 +1641,7 @@ class CduCreator:
                 stringa += value_dtp
                                    
 
-            if self.checkMapBox == True:
+            if self.checkMapBox:
                 #crea immagine della mappa centrata sull'area di interesse
                 img = QImage(QSize(500, 500), QImage.Format.Format_ARGB32_Premultiplied)
 
@@ -1708,7 +1721,7 @@ class CduCreator:
             doc.print(printer)
             self.dlg.textLog.append(self.tr('Il file PDF {} è stato salvato nella cartella {}.\n'.format(cdu_pdf_name, self.cdu_path_folder)))
             QCoreApplication.processEvents()
-            if self.checkOdtBox == True:
+            if self.checkOdtBox:
                 if self.cdu_file_name == '':
                     cdu_odt_name = 'cdu_{}.odt'.format(datetime.now().strftime("%d%m%Y_%H%M%S"))
                 else:

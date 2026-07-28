@@ -36,7 +36,7 @@ class CduCreatorDialogTest(unittest.TestCase):
         self.assertFalse(icon.isNull())
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(CduCreatorResourcesTest)
+    suite = unittest.makeSuite(CduCreatorDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
 
